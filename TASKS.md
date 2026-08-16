@@ -248,3 +248,32 @@ legible without prose.
 - [ ] `pnpm check` green, `pnpm check:evidence` green.
 - [ ] Repo public, Pages enabled, deploy finished, live URL serves at both
       viewports. CI needs time to finish — green *later* is not green.
+
+## Slice 1b — the field, and the graded-deposit sweep (Decisions 16, 17)
+
+The page's fixture moves from the 12-node double bridge to a 60×40 field. The
+bridge stays as the fast unit-test and oracle fixture. **Nothing is adopted until
+the sweep produces a variant that forms a road.**
+
+- [x] `scripts/build-field.ts` → `src/fixtures/field.ts`, committed data, diff test
+      (`spec/field.test.ts`). BFS **101 round the wall / 51 through the gap, ratio
+      1.980**, zone to zone.
+- [x] `pnpm spike --fixture=field` — the first answer was **no road at any size**;
+      recorded in `docs/spikes/2026-08-17-field.md`. Fixed deposit gives no
+      direction in 2-D.
+- [x] **Checkpoint 1** — the four-parameter generalisation (graded deposit,
+      momentum weight, whisker, arrival zones), every default today's behaviour,
+      with `spec/engine-regression.test.ts` freezing 34 bridge digests.
+- [x] **Checkpoint 2** — the variant sweep, Stage A (does a road form?) and Stage B
+      (the four behaviours), into `docs/spikes/2026-08-17-field-graded.md`.
+      Spike only: no adoption, no default changed, no threshold touched.
+- [ ] The derive turn, *after the director picks a variant*: thresholds per
+      fixture, ρ band per fixture, mutants two-sided on the field, `CLAUDE.md`
+      engine-contract lines amended through `harness-sync`.
+- [ ] If no variant forms a road: stop, do not add a fifth knob — the next ruling
+      is the Q/L retrace fallback.
+- [x] **Field v2 + Stage C** (Decision 18) — the fork moved to the ants' feet
+      (BFS **58 / 30, ratio 1.933**), and the scale hypothesis tested across
+      D x rho. Geometry cause fixed; scale cause **not** fixed. Recorded in
+      `docs/spikes/2026-08-17-field-v2-stage-c.md`.
+- [ ] The director's ruling on a fifth knob (a per-step wander rate). Not assumed.

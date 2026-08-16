@@ -212,3 +212,33 @@ for this commit.
 
 **Citation.** This commit — `src/sim/rho.ts` (new), `scripts/derive.ts`,
 `spec/engine-behaviours.test.ts`, `spec/mutants.test.ts` (header comment).
+
+### 2026-08-17 — the sweep ranked a variant with 47 trips first
+
+**What happened.** The graded-deposit sweep scored 64 parameter combinations and,
+when none passed the provisional line, fell back to ranking them by settled
+reading alone. It put `T=∞ W=3 w=4 D=20` on top at 1.39× — a variant that had
+completed **47 trips in 15,000 steps**. The real winner, at 1.42× with **18,885
+trips**, came second. I nearly reported the wrong variant as best.
+
+**What I did instead of the obvious thing.** The obvious fix was to eyeball the
+table and pick the right one. That leaves the next run free to make the same
+mistake with nobody watching.
+
+Instead the failure mode became part of the selection: **trip count is a gate on
+candidacy, not a tie-break.** A variant that barely gets anyone home can post a
+flattering ratio *precisely because* the few ants that made it went straight — so
+"enough trips for the mean to mean anything" has to be true before the mean is
+compared at all. The threshold reuses the pass line's own trip criterion rather
+than inventing a second number, and the reason is written where the code is, so a
+reader meets the trap and its fix together.
+
+**How I knew it was right.** Re-running with the gate moved
+`T=80 W=3 w=4 D=20` to the top — the variant whose ASCII map plainly shows a road
+and whose 99% of trips are home within 4× the shortest, against the 47-trip
+variant's 79%. The gate changed the answer, which is the only evidence that a
+guard was doing anything.
+
+**Citation.** This commit — `scripts/spike-graded.ts` (the `credible()` gate and
+its comment), `docs/spikes/2026-08-17-field-graded.md`.
+

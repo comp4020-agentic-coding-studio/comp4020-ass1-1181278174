@@ -17,6 +17,12 @@ import { shortestPathLength } from "../src/oracle/bfs.ts";
 import * as engine from "../src/sim/engine.ts";
 import { reading } from "../src/sim/reading.ts";
 
+// Decision 16 gave the visitor's page a field fixture. The double bridge stays as
+// the fast oracle fixture, so the flag picks which sensor runs.
+if (process.argv.includes("--fixture=field")) {
+  await import("./spike-field.ts");
+} else {
+
 const fixture: Fixture = DOUBLE_BRIDGE;
 
 // Placeholders, not derived. Named so nobody reads them as settled.
@@ -444,4 +450,6 @@ if (process.argv.includes("--fine")) {
   for (const rho of [0, 0.05, 1]) trial(rho);
   console.log("");
   console.log("Nothing above is a derived threshold. What the numbers were, only.");
+}
+
 }

@@ -13,6 +13,9 @@
     "spike": "node scripts/spike.ts",
     "test": "vitest run",
     "derive": "node scripts/derive.ts",
+    "build:field": "node scripts/build-field.ts",
+    "spike:graded": "node scripts/spike-graded.ts",
+    "spike:stagec": "node scripts/spike-stagec.ts",
     "shot": "node scripts/shot.ts"
   },
   "devDependencies": {

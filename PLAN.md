@@ -675,9 +675,165 @@ order at both (Decision 14).
 
 Focus is visible on every one of them (`:focus-visible`, 2px outline, offset).
 
+### Decision 16 — the visitor's fixture becomes a field
+
+Director text, verbatim:
+
+> Change of fixture, not of mechanic — Decision 16. Beat 1 as built (12 nodes, two arcs) does not
+> land: "a trail forms from nothing" is eight edges lighting up. What I want the visitor to SEE in
+> the first ten seconds is a field: hundreds of ants pouring out of the nest, threading between a few
+> obstacles, a bright road growing on its own. So the visitor's fixture becomes a FIELD that is a
+> double bridge in disguise: a grid (≈ 60×40, 4-neighbour induced graph), nest left, food right, one
+> wall spanning top-to-bottom with a CLOSED gap in the middle (that gap is the shortcut segment; going
+> around the wall is the long way), plus 3–5 fixed obstacle blocks so the road visibly threads between
+> things. Same engine (Model 1 / 1b), same two maps, same ρ slider, same one verb (the gap is the
+> tappable wall cell), same reading, same controls, same page. The 12-node double-bridge stays as the
+> fast unit-test and oracle fixture; thresholds for the page are re-derived on the field with the
+> same two-sided harness. Ant count 300–500 (perf is trivial). No distance heuristic, ever — if the
+> first food discovery is too slow, the fix is nearer food / more ants / a smaller field.
+
+**Built** — `scripts/build-field.ts` → `src/fixtures/field.ts`, 60×40, 2141 nodes,
+4078 edges, 260 blocked cells, five obstacle blocks, gap at `30,11`. **BFS 101
+moves round the wall against 51 through the gap — ratio 1.980**, the bridge's 2.0.
+
+**Adoption: PENDING SPIKE.** The fixture exists and is tested; the page still runs
+the bridge. Nothing adopts the field until Decision 17's sweep produces a variant
+that forms a road (`docs/spikes/2026-08-17-field.md` records why the first attempt
+did not).
+
+### Decision 17 — the graded-deposit generalisation, spiked as variants
+
+The field spike found that mode 1b forms no road in 2-D at any size tested. Director
+text on what to do about it, verbatim and in full, because every clause of it is a
+constraint on the sweep:
+
+> Ruling on the field finding — Decision 17. Thank you for stopping there; the
+> diagnosis stands and I accept it: fixed deposit gives no direction in 2-D, and
+> the bridge's two corridors were doing the concentrating that the deposit rule
+> does not do. I am not taking (a) and not taking (b). I take (c), widened, and I
+> want it spiked as variants — nothing adopted until I have seen the numbers.
+>
+> Why not (a). Retrace makes the home map redundant: a carrier that walks its
+> remembered route home needs no second scent, so the two-map contract and beat
+> 1's sentence ("each ant only leaves a little scent and follows scent") turn into
+> "each ant remembers its own way back" — a different and weaker claim. It also
+> does nothing for exploration: forward ants still random-walk 3000 steps to the
+> first food, which is PLAN.md's own "against" for AS on a large graph without η.
+> The Q/L flag stays off. (a) is the fallback if (c) fails the criteria below.
+>
+> Why (c), and how it stays inside Decision 1c. The 2-D ant sims that get the look
+> I want WITHOUT a distance term all do one thing: an ant's deposit fades with the
+> time since it last left its own source. A seeker lays home-scent that gets
+> fainter the longer it has been away from the nest; a carrier lays food-scent
+> that gets fainter the longer since it left the food. Each ant's scent is its
+> own breadcrumb trail; the field made of everyone's breadcrumbs is graded toward
+> each source, and steering up the map you seek finally has a direction. Nothing
+> in an ant knows where anything is: it carries one bit and a step counter, reads
+> only the edges at its node and its own heading. η stays momentum-only; the
+> honesty test (move the food; the choice distribution at the nest must not
+> change) must still pass on the field.
+>
+> The generalisation — four fixture params, every default = today's behaviour, so
+> the bridge is bit-identical:
+>
+>   1. Graded deposit. On the edge just crossed: τ += D · exp(−t / T), where t is
+>      the number of steps since the ant last stood in its own source zone (nest
+>      for a seeker, food for a carrier; reset while inside the zone). T = ∞ is
+>      today's fixed deposit. D is the per-step deposit; the bridge keeps today's D.
+>   2. Momentum weights. An ant has a heading (its last move). Candidates are the
+>      non-U-turn edges, as now; U-turn only when trapped, as now. η_straight :
+>      η_turn = w : 1, today w = 1. This is Decision 1c's "purely local (momentum
+>      only)" and nothing more.
+>   3. Whisker. For each candidate direction, τ_dir is τ summed over up to W edges
+>      along the ray from the current node in that direction, stopping at a wall
+>      or the field edge. W = 1 is today's engine. This is the video's
+>      sense_radius in grid form.
+>   4. Arrival zones. Nest and food become small blocks (3×3); arrival = entering
+>      any cell of the block; the reading and BFS are measured between the zones,
+>      as spec/oracles.md already words it. Record the new BFS numbers; the
+>      long-way / through-the-gap ratio must stay ≈ 2, or tell me.
+>
+> Unchanged: P ∝ η_turn · (k + τ_dir + floor)^h with h, k, floor untouched; two
+> maps; global evaporation τ ← (1−ρ)τ; no retrace, no Q/L, no distance term, no
+> homing by angle, no max-update. If a Policy hook is the natural place for 1–3,
+> use it; if it isn't, say why and where you put it.
+
+**Where each knob landed.** (1) and (2)+(3) are Policy hooks, as invited:
+`deposit()` gained the ant's own `sinceSource` counter, and `weight()` gained a
+`Sense` — `{ straight, tau }` — that the engine computes once per candidate. (3)'s
+ray is *not* in the policy: it is walked from the graph, so it is precomputed in
+`adjacencyOf` next to the adjacency it belongs to, for the same reason that
+function is terrain rather than rules. (4) is engine state (`nestCells`,
+`foodCells`), because arrival is not a weighing decision. The heading and the step
+counter are per-ant arrays; neither is in `digest()`, since both only reach the
+world through the deposits and choices that already are.
+
+**Adoption: PENDING SPIKE.** Every default is today's behaviour and the double
+bridge is held bit-identical by `spec/engine-regression.test.ts` — 34 frozen
+digests, proven red-capable by a 3-parts-per-million deposit change. No default,
+threshold or `RHO` value has moved.
+
+### Decision 18 — field v2, and the scale hypothesis
+
+Director text, verbatim. Two causes, both tested in one turn:
+
+> Cause 1 — geometry. The gap is 19 cells from the road, so discovering it needs
+> a 19-cell excursion; on the bridge the shortcut is a fork ON the road that
+> every ant passes. Fix the disguise: the fork must be at the ants' feet.
+>   New field (v2), still 60×40, 4-neighbour, generated by build-field.ts:
+>   - wall at x = 22 from y = 6 to y = 39 — it touches the bottom edge, so the
+>     only long way is the passage at the top (y 0–5); no perimeter corridor;
+>   - nest zone 3×3 centred at (18, 20): two free cells between it and the wall;
+>   - the gap: cells (22,19), (22,20), (22,21), closed by default — the toggle;
+>   - food zone 3×3 centred at (50, 20);
+>   - 3–5 obstacle blocks, all in the right half and the top corridor, placed so
+>     the long road visibly threads between at least two of them; keep the
+>     straight run gap → food clean;
+>   - target BFS zone-to-zone: short ≈ 30, long ≈ 60, ratio 2.0 ± 0.1 — adjust
+>     block placement, not the wall, to hit it. Record the numbers; diff test
+>     regenerated; the honesty check re-run on v2.
+
+**Built.** BFS zone to zone: **58 moves over the top, 30 through the doorway,
+ratio 1.933** — inside 2.0 ± 0.1. 2185 nodes, 4184 edges, doorway of three cells
+four steps straight ahead of the nest, wall reaching the bottom edge so the top
+passage is the only long way. The settled road threads the top corridor between
+the two offset blocks and descends past a third — the perimeter corridor is gone.
+
+The scale hypothesis, stated by the director **before** the run so the record can
+show whether it survived, verbatim:
+
+> Cause 2 — scale, stated as a hypothesis before the run so the record can show
+> whether it survives: fork exploration in P ∝ (k+τ)^2 needs τ_road = O(k). On
+> the bridge, at the switching ρ, τ_road is a small multiple of k. On the field
+> with 400 ants and slow ρ, D = 20 puts τ_road at ~100 k, so choices are
+> deterministic and no ant ever explores the fork — which is why the switching
+> band only appears where the road is already ragged. Prediction: bringing D
+> back toward k's scale (D = 1–5; equivalent to raising k, which stays 20)
+> opens a band where the road still forms (W = 3 and w = 4 carrying the
+> following) AND ρ = 0 locks AND some ρ switches AND high ρ never settles.
+
+**The mechanism is confirmed; the prediction is not.** Stage C measured τ_road in
+multiples of k across D × ρ (`docs/spikes/2026-08-17-field-v2-stage-c.md`). The
+diagnosis was right — at D = 20, ρ = 0 the road carries **15,516 k**, and
+exploration is impossible there. But **no D opened the band**, because τ_road is
+governed by D *and* ρ together, roughly as D/ρ: lowering D does not buy
+exploration at a fixed road quality, it destroys the road. At D = 1 every ρ > 0
+collapses τ_road below 0.6 k and no road forms at all (17–52×).
+
+**The finding, stated as a mechanism rather than a list of failures: road quality
+and fork exploration are controlled by the same number.** A road needs
+τ_road ≳ k so ants follow it; a fork needs τ_road ≲ O(k) so ants sometimes do
+not. One knob cannot separate two requirements on one quantity — which is the
+argument for a wander rate that does not go through τ at all.
+
+**Adoption: PENDING.** Nothing adopted, no default changed, no threshold or `RHO`
+touched. The honesty invariant passes on v2.
+
 ## Open decisions
 
-**None.** Decisions 1–15 are settled, 9 and 10 dissolved. Beat 4's fixture source is
+**None settled by me.** Decisions 1–18 are recorded, 9 and 10 dissolved. The
+director's next ruling — a per-step wander rate ε, the fifth and last knob — is
+theirs to make with Stage C's numbers in front of them, and is not assumed here. Beat 4's fixture source is
 deferred to slice 8 as a condition, not an open question.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its
