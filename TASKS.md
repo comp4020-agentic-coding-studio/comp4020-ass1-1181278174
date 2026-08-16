@@ -23,20 +23,29 @@ source is decided in slice 8.
 
 ## Slice 0 — harness first
 
-- [ ] Write the working agreement and the facts that bite into `CLAUDE.md`:
+- [x] Write the working agreement and the facts that bite into `CLAUDE.md`:
       one bounded task per turn; stop at the first red check and offer choices;
       two failed attempts then stop; never change a threshold, `spec/oracles.md`
       or params without asking; stage, don't commit; every turn ends with an
       evidence block. Plus: fixed-step sim decoupled from rAF, canvas as pure
       projection of a fixed logical graph.
-      *Done when: the file states the rules the rest of the work is held to, and
-      the boilerplate that is prose rather than instruction is gone.*
-- [ ] Two rules go in as written rules, not as understandings:
+      *Done: the starter file is replaced wholesale; the template survives at
+      `bc2cd37`. "Facts that bite" opened with a measured entry rather than
+      empty — CI runs nothing while the repo is private.*
+- [x] Two rules go in as written rules, not as understandings:
       **"a threshold that has never been red is not a test"**, and **η may never
       encode distance to food** (Decision 1c — the invariant that protects the
       claim rather than the code).
-      *Done when: both are in `CLAUDE.md` verbatim, before any engine code
-      exists.*
+      *Done: both are in `CLAUDE.md`, marked verbatim and held by
+      `spec/harness-sync.test.ts`, before any engine code exists.*
+- [x] **`spec/harness-sync.test.ts`** — every clause `CLAUDE.md` marks in
+      guillemets must appear in `PLAN.md` or `spec/oracles.md`,
+      whitespace-normalised. `CLAUDE.md` restates ~500 words of them, and two
+      copies of one fact drift.
+      *Done: 6 clauses held, 8 assertions green in `pnpm check`. Proved capable
+      of failing — one word changed in a marked clause goes red, revert goes
+      green. Its own first run was red three times and every one was a defect in
+      the test, not drift in the docs (see `docs/harness-log.md`).*
 
 ## Slice 1 — the spike, headless, no UI
 

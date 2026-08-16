@@ -1,163 +1,178 @@
-# COMP4020 prototype
+# COMP4020 Assignment 1 — the colony's intelligence is in how fast it forgets
 
-This is your starter repo for a COMP4020 prototype: a static site written in
-HTML/CSS/TypeScript that builds to plain HTML/CSS/JS and deploys to GitHub
-Pages. The **deployed site is what gets marked** --- not this repo, and not "it
-works on my machine". It's marked live in Chrome against the deployed URL at two
-viewports --- 1920×1080 (desktop) and 390×844 (phone) --- and both count in
-full, so make that artefact good at both and use the checks below to know
-whether it is.
+Static site, plain HTML/CSS/TypeScript on Vite, on GitHub Pages. **The deployed URL is what
+gets marked**, live in Chrome at 1920×1080 and 390×844 — both in full. The course site's spec
+(assessments/assignment-1) is the fixed contract. `PLAN.md` holds my decisions (director
+records, agent proposes), `spec/oracles.md` every threshold's derivation, `TASKS.md` the
+slices, `docs/harness-log.md` and `docs/prompts.md` the evidence.
 
-The course website publishes this deliverable's brief and spec. The brief poses
-the problem; the spec is the fixed contract every response must satisfy. This
-repo's name tells you which deliverable applies. Run the course plugin's
-**start** skill at the start of each week: it pulls the right spec from the
-course API, carries your harness forward from last week, and helps you turn the
-spec's checkable lines into tests of your own. Read the brief and spec before
-you plan or build, and see `spec/README.md` for how the checks relate to them.
+**This next section holds what the site *is* and what I decided; the "must have bitten" rule
+governs every other section.** Clauses wrapped in guillemet marks below are verbatim from
+`PLAN.md` or `spec/oracles.md`; `spec/harness-sync.test.ts` goes red if one drifts.
+
+## This prototype
+
+- **The claim (h1 draft):** *The colony's intelligence is not in any ant. It is in how fast
+  they forget.* Four beats, one mechanic — a trail forms from nothing, a shortcut opens, the
+  colony stays locked to the long way, the forgetting slider breaks it out; see `PLAN.md`.
+  Beats 1–3 are the assignment. Beat 4 (a Canberra street fixture) is a re-skin, scheduled
+  last, cut without negotiation if it needs **«a new verb, a new readout, a new control, or
+  more than 3 sentences of its own»**. A second mechanic (parameter panel, traffic model, TSP,
+  graph routing, a third scene, algorithm comparison) is out — say so instead of building it.
+- **Beat 1 is live emergence.** Zero pheromone at load, nothing pre-baked. The opening, not a
+  tutorial: after ≤ 2 of the six argument sentences a visitor with no background can say "each
+  ant only leaves a little scent and follows scent" and "nobody planned that road". Verified
+  by a cold read (two people with no background) — no test can hold it.
+- **Three controls, hard cap:** toggle a wall cell (one verb: opens the shortcut, closes a
+  street, free-draws in the epilogue) · forgetting rate (native `<input type=range>`) · run /
+  pause / reset — pause **visible**, because WCAG 2.2.2 applies and the sim runs indefinitely.
+  The epilogue is invariant tests only, no thresholds (the list is in `PLAN.md`), because a
+  visitor's own maze has no correct answer.
+- **Prose ≤ 8 sentences:** 6 argument + 1 citation + 1 carrying all three applications (ends
+  "«— and none of it is how Google Maps routes you»"). h1, ODbL footer, control labels,
+  readouts and ≤ 4-word hints do not count; *a test may count prose sentences in dist and fail
+  above 8*. The last argument sentence keeps "«a tendency, not a guarantee»". **Jargon rule** —
+  `pheromone`, `ACO`, `heuristic`, `ρ`, `stigmergy`, formulas and pseudocode appear only in
+  the citation and applications sentences: my implementation of Decision 7 for a visitor with
+  no background, not a rule that has bitten.
+- **Stack:** plain Vite + TypeScript as shipped — one page, one canvas. An SSG's page layer
+  would add config and base-path risk without serving the brief. `base: "./"` already handles
+  the Pages path; do not change it.
+- **Engine (Model 1, mode 1b, explicit graph):** two pheromone maps on the edges — seekers lay
+  "home" and steer by "food", carriers lay "food" and steer by "home". Each ant holds one bit
+  (carrying or not) and reads only the edges at its node. Fixed deposit per step, no retrace.
+  *The Q/L retrace flag stays OFF by default and is enabled only on spike evidence; either
+  outcome is logged in `docs/harness-log.md` and the discarded variant stays in history.* Both
+  maps evaporate at `ρ`; **`ρ` is the slider.** `src/sim/**` is pure TypeScript: no DOM
+  imports, seeded PRNG only, fixed-step and decoupled from `requestAnimationFrame`, `step()`
+  never renders. The canvas is a pure projection of a fixed logical graph — a resize only
+  redraws. **The engine is host-agnostic** — runs unchanged in Node (spike/tests), on the main
+  thread, or in a Worker; where it runs in the page is a slice-3 decision, two options with
+  trade-offs, mine to make.
+- **Required behaviours, proven headless before any UI:** the four behaviours, `PLAN.md`.
+  **«If 1b cannot, we reopen Decision 1 toward 1a — we do not tune thresholds to pass.»**
+- **The reading:** median trip length over the last `N_trips` completed food→nest trips,
+  divided by BFS shortest — same unit, moves between the two arrival zones. Below `MIN_TRIPS`
+  it says "no reading yet", never a number. **One function** computes it for the UI, the trace
+  and the tests. The secondary readout (share of ants on the shorter branch) is never
+  thresholded.
+- **Verification contract:** thresholds (`LOCKED`, `SWITCHED`, `UNSTABLE`, `N`, `M`, `K`,
+  `N_trips`, `MIN_TRIPS`) are symbols until the spike derives them by two-sided separation
+  against the negative controls; distributions and margins go in `spec/oracles.md`. Six
+  mutants live in `spec/mutants.test.ts` and run under `pnpm check`, asserting RED — three
+  load-bearing, three pins, named in `spec/oracles.md`. `pnpm spike` (`scripts/spike.ts`)
+  prints the reading, an ASCII map and the fixture parameters (`α`/`h`, pheromone floor); no
+  lock-in conclusion is recorded without them.
+- **Who owns which number:** `spec/oracles.md` owns fixture parameters (`α`/`h`, floor,
+  `N_trips`, thresholds); `src/sim/params.ts` owns engine constants (deposit, step, ant-count).
+  Neither is edited without asking.
+- **Two load-bearing rules, verbatim:**
+  - *«a threshold that has never been red is not a test».*
+  - *«the heuristic term η is a constant or purely local (momentum only) — it must never encode distance to food, or beat 1's sentence ("no ant knows the map") is false»*
+- **Data contract (beat 4 only):** the street fixture is generated by `scripts/build-map.ts`,
+  never hand-edited; a diff test guards it; ODbL attribution stays on the page.
+- **Artefact contracts, from the rubric** (keyboard, both viewports, resize mid-use): canvas
+  has `touch-action: none` and pointer capture; every pointer action has a keyboard path — the
+  map is in `PLAN.md`; coordinates normalised; `aria-pressed` on toggles, a throttled
+  `aria-live` readout; `prefers-reduced-motion` keeps informative motion, drops decorative
+  motion, does not autoplay, and slows the cadence to *≤ 4 fps or a "step 200" button* — with
+  *a dedicated test for the reduced-motion branch*, because the branch nobody exercises is the
+  broken one.
 
 ## How to work in here
 
-- Keep the dev server running (`pnpm dev`) so you see changes as you make them.
-- Before you push, run `pnpm check`. It runs most of what CI runs --- build,
-  lint, and the spec --- so you catch those in seconds instead of waiting for
-  the pipeline. The links check, the evidence check, the secrets scan, and the
-  deploy itself only run in CI; run `pnpm dlx linkinator ./dist --silent`
-  locally against a fresh `pnpm build` for the links check without waiting for
-  CI.
-- To see what the page actually looks like rather than what you assume it looks
-  like, open it in a browser (the `agent-browser` CLI, documented on
-  [the course site](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/backpressure/#agent-browser-the-rendered-page-as-ground-truth),
-  works well for this). The rendered page is the truth; your mental model of it
-  isn't.
-- When a check fails, read its output before changing anything. Each check below
-  names what it measures, and the failure message is the instruction: it tells
-  you the file, the line, or the contract. Treat a red check as authoritative
-  --- the page is wrong until the check is green, not until you decide it should
-  be.
-- Commit when the checks pass. Never commit a red state.
+- Keep `pnpm dev` running; run `pnpm check` before pushing (typecheck → build → oxlint →
+  stylelint → vitest). **While the repo is private, CI runs nothing** — see Facts that bite,
+  which is why the evidence files must be green before the flip, not during it. Reproduce the
+  links check with CI's own command from `.github/workflows/checks.yml`, not from memory.
+- Sensor roster = `package.json`'s `check`, `.github/workflows/checks.yml`, and the spike and
+  mutants above.
+- **"Never commit a red state" means never commit a regression.** Oracle tests start red by
+  design and the commits that flip them green are process evidence. Committing with an oracle
+  still red is fine **when the message names which one and why**. Making a test green by
+  weakening it never is.
+- Read a red check's output before changing anything — the failure message is the instruction,
+  and the page is wrong until it is green.
+- **Stuck: stop and ask, do not loop.** Two failed attempts on one theory is the signal.
+  Report what you tried, what you observed, what you now think, then wait.
+- **Can't verify: say so and route it — but check whether it's the tool first.** "Can't be
+  checked here" needs evidence like any other claim.
 
-## The checks (your sensors)
+## Working with me — stopping points and evidence obligations
 
-CI runs these on every push once your repo is public. GitHub's checks UI shows
-two jobs, `check` and `deploy` --- not one status per sensor below --- and
-within `check` the steps run in sequence (`pnpm check` chains typecheck, build,
-lint, and the spec with `&&`), so an early failure like a broken build stops the
-later sensors from running for that push; fix it and push again to see the rest.
-While the repo is private (all week, until you ship) the CI jobs stay skipped
---- `pnpm check` is the same roster on your machine, and it's the faster loop
-anyway. They aren't hoops. Each is a different way of finding out something true
-about the site that you can't reliably see by looking at it.
+The marked thing is *my* directing. A fix I never saw is not evidence; a run I could not steer
+is not directing.
 
-They also carry a mark at a crit: the sweep runs fifteen minutes after your
-cutoff, and green checks there are worth half that week's shipped mark. Still
-running counts as not green, so ship with time for CI to finish.
+- **One bounded task per turn**, then stop and report. The next thing you noticed goes under
+  "next".
+- **Stop at the first red check**, never fix it silently. Paste the failure, say what you think
+  went wrong, offer: (a) fix the code, (b) add a rule here, (c) add or tighten a check, (d)
+  throw the attempt away. Wait for my pick.
+- **Two attempts, then stop.** A third on the same theory is never what is needed.
+- **Design decisions are mine.** More than one reasonable answer → at most two options with
+  trade-offs and a recommendation, then wait. Decisions go to `PLAN.md`, quoted, with
+  provenance.
+- **Never edit `spec/oracles.md`, any threshold, or `src/sim/params.ts` without asking.** A
+  threshold that does not hold is a finding to report, not a number to change.
+- **You stage, I commit, I push.** Propose the message (what / why / how verified / not
+  verified / harness change). Small commits, one idea each. Never push.
+- **List what you fixed on your own** under "fixed silently", so I can decide whether it earns
+  a rule or a check.
+- **Cap the run.** After ~10 tool calls without a checkpoint, or ~15 minutes, report progress
+  even if unfinished. On interrupt, summarise state and wait.
+- **The evidence block ends every turn** — commands + output, diff shape, what you observed at
+  both viewports (or "no UI yet"), what you did not verify, fixed silently, next.
+- **Never paraphrase a director message as though quoted, and never invent one.** If there is
+  no message to quote, say so.
+- **Adding to this file:** the trigger is you corrected the agent on the same thing twice, or a
+  check caught you unexpectedly — nothing else earns a place.
+- **One commit per rule, when it happens** — this file's growth is process evidence and
+  `PROCESS.md` cites those commits.
 
-- **typecheck** --- `tsc --noEmit` runs first in `pnpm check`, so a type error
-  stops the roster before the build even starts. The types are extra
-  backpressure: a red here is the compiler telling you a claim in the code is
-  false.
-- **build** --- the site must build (`pnpm build`). A build failure means the
-  deployed site is broken or stale, so nothing else matters until this is green.
-- **deploy / online** --- the live GitHub Pages URL must load and return the
-  page you expect. An asset that 404s on the deployed URL counts as broken even
-  if it loads locally.
-- **spec** --- `spec/invariants.test.ts` asserts what's true of any good
-  website, whatever the week's brief asks; the tests you write for the week's
-  spec run alongside it (any `spec/*.test.ts`). A failure names the contract
-  you haven't met yet.
-- **lint** --- `stylelint` for CSS, `oxlint` for TypeScript. Flags code that's
-  wrong, fragile, or non-idiomatic. Read the rule it names.
-- **tests** --- any other tests you write, wherever you put them (co-located
-  with your source is fine, not just `spec/`), must pass. Vitest picks up both
-  this and the spec suite in one `vitest run`, the last step of `pnpm check`. A
-  failing test is a claim about the site that's no longer true.
-- **evidence** (`pnpm check:evidence`) --- checks your process evidence:
-  `PROCESS.md`'s citations resolve to real commits, the current deliverable's
-  exact reflection is in `reflections/` (worked out from this repo's name
-  against the public course API), and your `CLAUDE.md` is present. Evidence
-  gates the deploy --- `deploy` needs `check` to pass, so failing evidence
-  blocks the deploy alongside everything else. See
-  [Your process is part of the mark](#your-process-is-part-of-the-mark) below,
-  and the course website's
-  [assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-  for what counts as evidence.
-- **links** --- internal links must resolve. A broken link is a dead end you
-  didn't mean to ship.
-- **secrets** --- the repo is scanned for committed credentials. Never put a
-  key, token, or password in a tracked file. If one leaks, rotate it. A local
-  pre-commit hook (`.githooks/pre-commit`, installed by `pnpm install`) also
-  blocks any commit containing something shaped like an API key --- by the time
-  CI sees a key it's already pushed, so the hook is the sensor that matters.
+## The working loop
 
-Nothing here measures **accessibility** or **performance** --- wiring those
-sensors (`axe-core`, Lighthouse, or whatever you choose) is your work, and later
-in the course the spec will ask you to show how you tested both. When you do,
-read a green performance result honestly: it's a lab estimate from one run on a
-CI machine, not proof the site is fast for real users.
+1. **Explore** — read the relevant source *and the checks* first.
+2. **Plan** — the change, its boundary, and **how it will be verified, before writing code**.
+   One-sentence diffs may skip this; unfamiliar, multi-file or open-ended ones may not.
+3. **Implement** — one bounded change; a second worth doing gets its own commit.
+4. **Verify** — all three: `git diff --numstat` then read it; `pnpm check` (+ `pnpm spike` when
+   the engine changed); the rendered page at both viewports. **A failed verify sends you to
+   step 1, not to a patch.**
 
-## The stack is swappable
+**"Done" is a claim.** End every loop — and every commit message — with what you ran, what it
+printed, the diff, what you observed in the artefact, and **what you did not verify**.
 
-Out of the box this is plain HTML/CSS/TypeScript on Vite, and every `.html` file
-in the repo is a page: add pages, link them, and the build picks them up with no
-config. That's a default, not a rule (unless the week's spec says otherwise).
-You can swap in Astro or any other static generator, because nothing in CI names
-a tool --- the whole contract is:
+**A new test has to be proved capable of failing.** Break what it guards on purpose, watch it
+go red, put it back. A guard that cannot fail is decoration.
 
-- `pnpm build` emits the complete site into `dist/`
-- the `package.json` scripts (`check`, `check:evidence`, `build`) keep working
-- whatever lands in `dist/` still passes the invariants in `spec/`
+**Corrections land in the harness, not in a retry.** Twice wrong → pick one: a rule here (with
+its reason and the failing commit), a check (test / lint / spike assertion), or `git revert`
+with the reason in the message. Log it in `docs/harness-log.md`.
 
-Two things bite in a swap. The deployed site lives under a path
-(`…github.io/<repo>/`), so configure your generator's base path --- this
-template's Vite config uses relative asset URLs to sidestep that, but most
-generators (Astro included) need `base` set explicitly, and getting it wrong
-looks fine locally while every asset 404s on the live URL. And commit the
-updated `pnpm-lock.yaml`: CI installs with `--frozen-lockfile`.
+## Facts about this repo that bite
 
-## Your process is part of the mark
+An entry earns its place only after it has cost time in *this* repo and is not guessable from
+the code. Shape: what happened, what is actually true, how it was measured. Delete it when it
+stops being true. Nothing is carried here unverified.
 
-The deployed page is only half of it. How you got there is marked too: your
-commit history, your agent files, and the decisions visible across them. The
-checks above can't see any of that, so a person reads it directly --- which
-means building legibly is part of building well.
+### CI is skipped while the repo is private — not merely "CI-only"
 
-- **Commit as you go.** Small, frequent commits are the record of how the work
-  came together, and that record is read, not just the final state. A trail that
-  grew alongside the code is the strongest evidence of your process; a single
-  dump the night before is the weakest.
-- **Keep a process overview** (`PROCESS.md`). A short reading-guide, not an
-  essay: what you built, the moments that mattered --- each pointing at a
-  commit, a `CLAUDE.md` change, or a prompt and the commit it produced --- and
-  where to look in the history. It points a marker at the evidence; it doesn't
-  stand in for it, and claims the history doesn't back don't count. The
-  `PROCESS.md` in this repo is a template showing the shape and the citation
-  format (link text the commit hash or range, target the commit or compare URL);
-  `pnpm check:evidence` verifies your citations resolve to real commits before
-  you ship. Markers follow those citations and don't trawl the repo for evidence
-  you didn't cite.
-- **Write your reflection in `reflections/`** --- a short markdown file in this
-  repo, named for the deliverable it answers, so the number in the filename is
-  the number in this repo's name (`crit-1.md` in `comp4020-crit1-<you>`,
-  `assignment-1.md` in `comp4020-ass1-<you>`); `reflections/README.md` has the
-  full rule. `pnpm check:evidence` checks the exact current name against the
-  course API, not merely the presence of any well-named file. It answers the two
-  standing prompts: the breakthrough that moved the work forward, and what this
-  work changed about the developer you want to be. It stays out of the deployed
-  site. It's due at the cutoff, and if it isn't in the repo by then the week
-  doesn't count as shipped, however good the prototype is.
-- **This file is process evidence.** The harness you build to direct the agent,
-  this `CLAUDE.md` and any `AGENTS.md`, is itself read as part of how you
-  worked. Keep it honest and current (see below).
+**What happened.** A push showed a run in progress, and the agent reported that Actions minutes
+were available and every push would now give real CI signal.
 
-You don't need a name, a student number, or any identity file in the repo: we
-know whose repo it is. Spend the effort on the work.
+**What is actually true.** Both jobs skip while the repo is private; nothing runs. The first
+real run of `check:evidence` is at ship time, and it gates `deploy` — so the evidence files must
+be green *before* the flip, not discovered during it.
 
-## This file is yours
+**How it was measured.** Run `31954015672` on `main`: `check` skipped, `deploy` skipped
+(`gh run view 31954015672 --json jobs`).
 
-This CLAUDE.md is a starting point, not a fixed rulebook. As you learn what your
-prototype needs --- a convention to hold the agent to, a sensor that keeps
-catching you out, a fact about the stack the agent keeps getting wrong --- write
-it down here. Growing this file is the work of harness engineering, and the gap
-between this boilerplate and your own version is part of what your prototype
-says about the developer you're becoming.
+## Before you commit the page
+
+`lang` on `<html>` · non-empty `<title>` · viewport meta · exactly one `<h1>` · `alt` on every
+`<img>` · **a real `<nav>` of in-page anchors (Claim / Try it / Sources) plus a skip link** —
+the single page still owes the invariant a navigation landmark (`spec/invariants.test.ts`
+enforces all six against `dist/`) · `aria-label` on the canvas · `aria-pressed` on toggles · a
+throttled `aria-live` readout · a visible pause · `prefers-reduced-motion` honoured ·
+`spec/starter.test.ts` deleted with the starter page (its failure is not a regression; re-adding
+`data-testid="intro"` is the wrong fix).
