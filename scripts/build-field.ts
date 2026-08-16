@@ -236,6 +236,27 @@ export function v4Spec(): FieldSpec {
   });
 }
 
+/**
+ * v5 (Decision 26): the blank field the page ships. Nothing on it but the two
+ * zones. Every obstacle the visitor sees — a scene's blocks, a maze, their own
+ * walls — is a wall cell drawn with the one verb on this ground.
+ */
+export function v5Spec(): FieldSpec {
+  return finish({
+    name: "field-v5",
+    width: WIDTH,
+    height: HEIGHT,
+    nest: V4_NEST,
+    food: V4_FOOD,
+    gaps: [],
+    blocked: [],
+    nestZone: zoneAround(V4_NEST),
+    foodZone: zoneAround(V4_FOOD),
+    branches: { short: [], long: [] },
+    params: PARAMS,
+  });
+}
+
 function source(spec: FieldSpec, prefix: string, note: string): string {
   const cells = (list: readonly string[]) =>
     list.map((cell) => `    "${cell}",`).join("\n");
@@ -305,6 +326,14 @@ export const v4Source = (): string =>
     "v4 (Decision 22) — open ground: no wall, no doorway, twenty scattered blocks.",
   );
 
+export const v5Source = (): string =>
+  source(
+    v5Spec(),
+    "FIELD_V5",
+    "v5 (Decision 26) — the blank field: open ground, nothing on it but the zones.\n" +
+      "// Scenes (src/fixtures/presets.ts) are walls drawn on this ground.",
+  );
+
 function report(spec: FieldSpec, label: string): void {
   const fixture = buildField(spec);
   const bfs = shortestPathBetween(
@@ -332,11 +361,16 @@ function report(spec: FieldSpec, label: string): void {
 function main(): void {
   writeFileSync("src/fixtures/field-v3.ts", v3Source());
   writeFileSync("src/fixtures/field-v4.ts", v4Source());
+  writeFileSync("src/fixtures/field-v5.ts", v5Source());
   report(v3Spec(), "v3 (frozen)");
   console.log("");
-  report(v4Spec(), "v4 (the page)");
+  report(v4Spec(), "v4 (frozen — the spikes)");
   console.log("");
-  console.log("written -> src/fixtures/field-v3.ts, src/fixtures/field-v4.ts");
+  report(v5Spec(), "v5 (the page, blank)");
+  console.log("");
+  console.log(
+    "written -> src/fixtures/field-v3.ts, src/fixtures/field-v4.ts, src/fixtures/field-v5.ts",
+  );
 }
 
 if (process.argv[1]?.endsWith("build-field.ts")) main();

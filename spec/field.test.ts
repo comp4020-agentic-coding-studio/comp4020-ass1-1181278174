@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { v3Source, v4Source } from "../scripts/build-field.ts";
+import { v3Source, v4Source, v5Source } from "../scripts/build-field.ts";
 import { FIELD_V3, FIELD_V3_SPEC } from "../src/fixtures/field-v3.ts";
 import { FIELD_V4, FIELD_V4_SPEC } from "../src/fixtures/field-v4.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
@@ -25,6 +25,7 @@ describe("the field fixtures are generated, not hand-edited", () => {
   for (const [file, source] of [
     ["src/fixtures/field-v3.ts", v3Source],
     ["src/fixtures/field-v4.ts", v4Source],
+    ["src/fixtures/field-v5.ts", v5Source],
   ] as const) {
     it(`${file} matches what scripts/build-field.ts produces right now`, () => {
       expect(
