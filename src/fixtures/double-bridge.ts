@@ -34,12 +34,62 @@ export interface FixtureParams {
   readonly k: number;
   /** Minimum pheromone on any edge — bounds how hard lock-in can ever be. */
   readonly floor: number;
+
+  // --- Decision 17: four knobs, every default today's behaviour ------------
+  // The double bridge sets none of them, which is why spec/engine-regression.test.ts
+  // can hold it bit-identical. Each exists because a fixed deposit gives no
+  // direction in 2-D: the bridge's two corridors were doing the concentrating
+  // that the deposit rule does not do.
+
+  /**
+   * (1) Graded deposit. An ant lays `D · exp(−t / T)` on the edge it just
+   * crossed, where `t` is steps since it last stood in its OWN source zone —
+   * the nest for a seeker, the food for a carrier. Each ant's scent is its own
+   * breadcrumb trail, faded by how long it has been walking, so the field made
+   * of everyone's breadcrumbs is graded toward each source. No ant knows where
+   * anything is; it carries one bit and a step counter.
+   *
+   * Undefined (or Infinity) is a flat deposit per step — today.
+   */
+  readonly gradedOver?: number;
+
+  /** (1) `D`. Undefined means the engine's own `depositPerStep` — today. */
+  readonly depositPerStep?: number;
+
+  /**
+   * (2) Momentum weight: `η_straight : η_turn = w : 1`. Purely local — it reads
+   * the ant's own last heading and nothing else, which is all Decision 1c
+   * permits. Undefined or 1 is no preference — today.
+   */
+  readonly straightBias?: number;
+
+  /**
+   * (3) Whisker: a candidate direction is weighed by `τ` summed over up to `W`
+   * edges along the ray that way, stopping at a wall or the field edge. The
+   * grid form of a sense radius. Undefined or 1 reads the single next edge —
+   * today.
+   */
+  readonly whisker?: number;
 }
 
 export interface Fixture {
   readonly name: string;
   readonly nest: NodeId;
   readonly food: NodeId;
+  /**
+   * (4) Arrival zones. Nest and food are blocks, not points: arrival is entering
+   * any cell of the block, and the reading and BFS are measured between the
+   * zones — which is how spec/oracles.md already words it. Undefined means the
+   * single node above, so the bridge is unchanged.
+   */
+  readonly nestZone?: readonly NodeId[];
+  readonly foodZone?: readonly NodeId[];
+  /**
+   * Grid coordinates, when the fixture is one. The engine uses them for nothing
+   * but "is this candidate straight ahead" and the whisker ray — never for a
+   * distance to anything, which Decision 1c forbids and the honesty test holds.
+   */
+  readonly cells?: ReadonlyMap<NodeId, readonly [number, number]>;
   readonly nodes: readonly NodeId[];
   readonly edges: readonly FixtureEdge[];
   /** Node sequences from nest to food inclusive. Redundant with `edges` on purpose: spec/fixture.test.ts checks the two agree rather than trusting them. */

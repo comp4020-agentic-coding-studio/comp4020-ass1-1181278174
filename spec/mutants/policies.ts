@@ -36,8 +36,8 @@ function distanceToFood(colony: Colony, node: number): number {
 export const ETA_KNOWS_THE_FOOD: Policy = {
   ...DEFAULT_POLICY,
   name: "η encodes distance to food",
-  weight: (colony, steer, choice, carrying) =>
-    DEFAULT_POLICY.weight(colony, steer, choice, carrying) /
+  weight: (colony, steer, choice, carrying, sense) =>
+    DEFAULT_POLICY.weight(colony, steer, choice, carrying, sense) /
     (1 + distanceToFood(colony, choice.to)),
 };
 

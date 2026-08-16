@@ -36,6 +36,21 @@ export interface ColonyOptions {
 export type Step = Hop;
 
 /**
+ * What the engine has already worked out about one candidate, so a policy does
+ * not recompute it per ant per step.
+ *
+ * Both fields are LOCAL by construction, which is what keeps Decision 1c intact:
+ * `straight` compares the candidate to the ant's own last heading, and `tau` is
+ * pheromone read off edges, never a distance to a goal.
+ */
+export interface Sense {
+  /** Does this candidate continue the ant's heading? Always false with no geometry. */
+  readonly straight: boolean;
+  /** Pheromone the whisker sees this way: `steer` summed over the candidate's ray. */
+  readonly tau: number;
+}
+
+/**
  * The rules, as data. Injected rather than hard-coded so the negative controls can
  * be alternative POLICIES instead of restated step loops — a mutant that copies the
  * loop drifts from the engine and quietly stops being a control.
@@ -56,13 +71,19 @@ export interface Policy {
     steer: Float64Array,
     choice: Step,
     carrying: boolean,
+    sense: Sense,
   ): number;
-  /** Lay pheromone for the crossing just made. */
+  /**
+   * Lay pheromone for the crossing just made. `sinceSource` is how many steps
+   * the ant has taken since it last stood in its own source zone — its own step
+   * counter, not a distance to anything.
+   */
   deposit(
     colony: Colony,
     lay: Float64Array,
     edge: number,
     carrying: boolean,
+    sinceSource: number,
   ): void;
   /** Once per step, after every ant has moved. */
   evaporate(colony: Colony): void;
@@ -77,15 +98,25 @@ export const DEFAULT_POLICY: Policy = {
       ? { steer: colony.home, lay: colony.foodTrail }
       : { steer: colony.foodTrail, lay: colony.home },
 
-  // P ∝ (k + τ + floor)^h. τ is the only term, and it is local to the edge — no
-  // distance, no goal, no map.
-  weight: (colony, steer, choice) => {
-    const { h, k, floor } = colony.fixture.params;
-    return Math.pow(k + (steer[choice.edge] as number) + floor, h);
+  // P ∝ η · (k + τ + floor)^h. τ is pheromone read off edges — the whisker's ray
+  // when the fixture asks for one, the single next edge otherwise. η is momentum
+  // and nothing else. No distance, no goal, no map.
+  weight: (colony, _steer, _choice, _carrying, sense) => {
+    const { h, k, floor, straightBias } = colony.fixture.params;
+    const eta = sense.straight ? (straightBias ?? 1) : 1;
+    return eta * Math.pow(k + sense.tau + floor, h);
   },
 
-  deposit: (_colony, lay, edge) => {
-    lay[edge] = (lay[edge] as number) + ENGINE_PARAMS.depositPerStep;
+  // τ += D · exp(−t / T). With no T this is a flat D every step, which is what
+  // the bridge has always done and what gives no direction in 2-D.
+  deposit: (colony, lay, edge, _carrying, sinceSource) => {
+    const { gradedOver, depositPerStep } = colony.fixture.params;
+    const amount = depositPerStep ?? ENGINE_PARAMS.depositPerStep;
+    lay[edge] =
+      (lay[edge] as number) +
+      (gradedOver === undefined || !Number.isFinite(gradedOver)
+        ? amount
+        : amount * Math.exp(-sinceSource / gradedOver));
   },
 
   evaporate: (colony) => {
@@ -113,6 +144,13 @@ export interface Colony {
   readonly at: Int32Array;
   readonly carrying: Uint8Array;
   readonly lastEdge: Int32Array;
+  /** The ant's last heading, or -1. Purely local; only `straightBias` reads it. */
+  readonly heading: Int32Array;
+  /** Steps since this ant last stood in its own source zone. Its own counter. */
+  readonly sinceSource: Int32Array;
+  /** Arrival zones as node indices. A single node each unless the fixture says otherwise. */
+  readonly nestCells: ReadonlySet<number>;
+  readonly foodCells: ReadonlySet<number>;
   readonly tripSteps: Int32Array;
   /**
    * Ring storage for completed trip lengths, capacity `tripHistory`. Not in
@@ -127,6 +165,18 @@ export interface Colony {
   tripsCompleted: number;
   readonly random: () => number;
   steps: number;
+}
+
+/** A zone as node indices — the listed cells, or just the single node. */
+function zone(
+  cells: readonly NodeId[] | undefined,
+  fallback: NodeId,
+  index: ReadonlyMap<NodeId, number>,
+): ReadonlySet<number> {
+  const ids = cells && cells.length > 0 ? cells : [fallback];
+  return new Set(
+    ids.map((cell) => index.get(cell)).filter((at): at is number => at !== undefined),
+  );
 }
 
 export function createColony(
@@ -155,6 +205,10 @@ export function createColony(
     at: new Int32Array(ants).fill(nest),
     carrying: new Uint8Array(ants),
     lastEdge: new Int32Array(ants).fill(-1),
+    heading: new Int32Array(ants).fill(-1),
+    sinceSource: new Int32Array(ants),
+    nestCells: zone(fixture.nestZone, fixture.nest, index),
+    foodCells: zone(fixture.foodZone, fixture.food, index),
     tripSteps: new Int32Array(ants),
     trips: [],
     tripHistory: options.tripHistory ?? TRIP_HISTORY,
@@ -200,24 +254,42 @@ export function step(colony: Colony): void {
     const choices = open.length > 0 ? open : all;
     if (choices.length === 0) continue;
 
-    const weights = choices.map((choice) =>
-      policy.weight(colony, steer, choice, carrying),
-    );
+    const heading = colony.heading[ant] as number;
+    const since = colony.sinceSource[ant] as number;
+    const weights = choices.map((choice) => {
+      let tau = 0;
+      for (const e of choice.ray) tau += steer[e] as number;
+      return policy.weight(colony, steer, choice, carrying, {
+        straight: choice.dir !== undefined && choice.dir === heading,
+        tau,
+      });
+    });
     const taken = choices[choose(colony, weights)] as Step;
-    policy.deposit(colony, lay, taken.edge, carrying);
+    policy.deposit(colony, lay, taken.edge, carrying, since);
     colony.at[ant] = taken.to;
     colony.lastEdge[ant] = taken.edge;
+    colony.heading[ant] = taken.dir ?? -1;
     if (carrying) colony.tripSteps[ant] = (colony.tripSteps[ant] as number) + 1;
 
-    if (taken.to === colony.food && !carrying) {
+    if (colony.foodCells.has(taken.to) && !carrying) {
       colony.carrying[ant] = 1;
       colony.tripSteps[ant] = 0;
       colony.lastEdge[ant] = -1;
-    } else if (taken.to === colony.nest && carrying) {
+      colony.heading[ant] = -1;
+      colony.sinceSource[ant] = 0;
+    } else if (colony.nestCells.has(taken.to) && carrying) {
       colony.carrying[ant] = 0;
       recordTrip(colony, colony.tripSteps[ant] as number);
       colony.tripSteps[ant] = 0;
       colony.lastEdge[ant] = -1;
+      colony.heading[ant] = -1;
+      colony.sinceSource[ant] = 0;
+    } else {
+      // Its own source zone, not the other one: a seeker resets at the nest, a
+      // carrier at the food. That is what makes each map graded toward its own
+      // source rather than smeared over the field.
+      const own = carrying ? colony.foodCells : colony.nestCells;
+      colony.sinceSource[ant] = own.has(taken.to) ? 0 : since + 1;
     }
   }
 
@@ -294,9 +366,16 @@ export function choiceDistribution(
   const choices = colony.adjacency[here] ?? [];
   // Through the policy, so a policy that cheats is visible to the honesty test.
   const { steer } = colony.policy.maps(colony, false);
-  const weights = choices.map((choice) =>
-    colony.policy.weight(colony, steer, choice, false),
-  );
+  // No heading: this asks what a seeker with no momentum would do, which is the
+  // question the honesty test needs — move the food and this must not budge.
+  const weights = choices.map((choice) => {
+    let tau = 0;
+    for (const e of choice.ray) tau += steer[e] as number;
+    return colony.policy.weight(colony, steer, choice, false, {
+      straight: false,
+      tau,
+    });
+  });
   const total = weights.reduce((sum, weight) => sum + weight, 0);
   const out = new Map<string, number>();
   choices.forEach((choice, i) => {
