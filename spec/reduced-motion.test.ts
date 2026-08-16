@@ -156,8 +156,9 @@ describe("the five controls, and no more", () => {
       (node) => node.id,
     );
     // Five controls (Decision 26): the scene (three buttons, one group), the verb
-    // (drawing walls, on the canvas, no button at all), the forgetting rate, the
-    // speed, and run/pause/reset. `clear` is an undo for the verb, not a sixth.
+    // (drawing walls, on the canvas — its Draw / Erase buttons are the verb's
+    // mode, Decision 27), the forgetting rate, the speed, and run/pause/reset.
+    // `clear` is an undo for the verb, not a sixth.
     expect(controls.sort()).toEqual([
       "clear",
       "reset",
@@ -167,7 +168,22 @@ describe("the five controls, and no more", () => {
       "scene-maze",
       "scene-random",
       "speed",
+      "tool-draw",
+      "tool-erase",
     ]);
+    page.page.destroy();
+  });
+
+  it("starts with the Draw tool, and Erase is a button away", () => {
+    const page = mount(false);
+    expect(page.page.tool()).toBe("build");
+    const draw = page.doc.getElementById("tool-draw") as HTMLButtonElement;
+    const erase = page.doc.getElementById("tool-erase") as HTMLButtonElement;
+    expect(draw.getAttribute("aria-pressed")).toBe("true");
+    page.click("tool-erase");
+    expect(page.page.tool()).toBe("erase");
+    expect(erase.getAttribute("aria-pressed")).toBe("true");
+    expect(draw.getAttribute("aria-pressed")).toBe("false");
     page.page.destroy();
   });
 

@@ -42,10 +42,10 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
   / `Maze`; a scene is nothing but a set of wall cells laid out on the blank field with the one
   verb before the ants set out, so it is terrain, not a mechanic. Choosing one restarts the
   ants; `Random obstacles` pressed again is another scatter (seeded, so the same press count is
-  the same scene) · **draw a wall** — the one verb, a drag on the canvas itself, with no
-  button; press on open ground to build and on a wall to rub out, the cell you press deciding
-  which the whole stroke does. Keyboard: arrow keys move a visible cursor, Enter toggles,
-  Escape hides it · **forgetting rate** — native `<input type=range>`, "never forget" to
+  the same scene) · **draw a wall** — the one verb, a drag on the canvas; two buttons,
+  `Draw` / `Erase`, say what a stroke does (Decision 27 — the verb's mode, not a sixth
+  control), and a stroke never does both. Keyboard: arrow keys move a visible cursor, Enter
+  toggles the cell either way, Escape hides it · **forgetting rate** — native `<input type=range>`, "never forget" to
   "forget everything", default measured rather than chosen (`FIELD_RHO`) · **speed** — a native
   `<input type=range>`, 30 to 300 steps per second, default 150 · **run / pause / reset** —
   pause **visible**, because WCAG 2.2.2 applies and the sim runs forever. `Clear walls` is an

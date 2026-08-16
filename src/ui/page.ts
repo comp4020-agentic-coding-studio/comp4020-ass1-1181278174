@@ -54,6 +54,8 @@ const ANNOUNCE_MS = 1000;
 /** Decision 19. Four hundred, so the visitor sees them pour out of the nest. */
 const ANTS = 400;
 
+export type WallTool = "build" | "erase";
+
 export interface PageDeps {
   readonly fixture: Fixture;
   readonly reducedMotion: boolean;
@@ -88,6 +90,9 @@ export interface Page {
   toggleShortcut(): void;
   /** The one verb, for the tests: build or rub out one cell. */
   toggleCell(node: NodeId): boolean;
+  /** What a drag does: build walls or rub them out (Decision 27). */
+  setTool(tool: WallTool): void;
+  tool(): WallTool;
   setSpeed(rate: number): void;
   setRho(value: number): void;
   /** Lay out a scene: a fresh colony on the same field, with that scene's walls. */
@@ -153,6 +158,10 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     blank: el<HTMLButtonElement>("scene-blank"),
     random: el<HTMLButtonElement>("scene-random"),
     maze: el<HTMLButtonElement>("scene-maze"),
+  };
+  const toolButtons: Record<WallTool, HTMLButtonElement> = {
+    build: el<HTMLButtonElement>("tool-draw"),
+    erase: el<HTMLButtonElement>("tool-erase"),
   };
 
   const plan = motionPlan(deps.reducedMotion);
@@ -323,12 +332,27 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   // --- controls -------------------------------------------------------------
 
   /**
-   * Drawing. The state of the cell you press on decides whether this whole
-   * stroke builds or rubs out — so dragging along a wall you just drew rubs it
-   * out rather than flickering cell by cell, and a stroke never does both.
+   * Drawing. The wall TOOL — Draw or Erase, two buttons (Decision 27) — decides
+   * what a whole stroke does, so a stroke never does both and dragging along a
+   * wall you just drew, with Erase chosen, rubs it out cell by cell without
+   * flickering. (It used to be decided by the cell you pressed on, which was
+   * invisible; the director asked for buttons.) From the keyboard, Enter still
+   * toggles the cell under the cursor either way.
    */
-  let stroke: "build" | "erase" | null = null;
+  let tool: WallTool = "build";
+  let stroke: WallTool | null = null;
   let strokeLast: NodeId | null = null;
+
+  function setTool(next: WallTool): void {
+    tool = next;
+    for (const [name, button] of Object.entries(toolButtons)) {
+      button.setAttribute("aria-pressed", String(name === next));
+    }
+  }
+  const onToolClick = (event: Event): void => {
+    const target = event.currentTarget as HTMLButtonElement;
+    setTool(target.id === "tool-erase" ? "erase" : "build");
+  };
 
   const applyStroke = (node: NodeId | null): void => {
     if (!node || node === strokeLast || stroke === null) return;
@@ -343,7 +367,7 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     if (!node) return;
     event.preventDefault();
     stage.setPointerCapture?.(event.pointerId);
-    stroke = colony.drawnWalls.has(node) ? "erase" : "build";
+    stroke = tool;
     strokeLast = null;
     applyStroke(node);
   };
@@ -428,6 +452,9 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   for (const button of Object.values(sceneButtons)) {
     button.addEventListener("click", onSceneClick);
   }
+  for (const button of Object.values(toolButtons)) {
+    button.addEventListener("click", onToolClick);
+  }
   rhoInput.addEventListener("input", onRhoInput);
   runButton.addEventListener("click", onRunClick);
   resetButton.addEventListener("click", onResetClick);
@@ -441,6 +468,7 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   speedInput.step = String(SPEED.step);
   setSpeed(STEPS_PER_SECOND);
   sceneButtons.blank.setAttribute("aria-pressed", "true");
+  setTool("build");
 
   if (deps.prime) {
     if (deps.prime.scene) setScene(deps.prime.scene);
@@ -472,6 +500,8 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     setRho,
     setScene,
     scene: () => sceneKind,
+    setTool,
+    tool: () => tool,
     destroy() {
       loop.stop();
       canvas.dispose();
@@ -484,6 +514,9 @@ export function createPage(doc: Document, deps: PageDeps): Page {
       speedInput.removeEventListener("input", onSpeedInput);
       for (const button of Object.values(sceneButtons)) {
         button.removeEventListener("click", onSceneClick);
+      }
+      for (const button of Object.values(toolButtons)) {
+        button.removeEventListener("click", onToolClick);
       }
       rhoInput.removeEventListener("input", onRhoInput);
       runButton.removeEventListener("click", onRunClick);

@@ -1245,9 +1245,19 @@ road reconnecting), each width verified before the PNG was trusted.
 covered through `toggleCell` and the keyboard path, not synthesised pointer
 events; no screen-reader pass.
 
+### Decision 27 — Draw and Erase buttons for the wall tool
+
+Director, verbatim: 「能不能增加一个画墙和删墙的按钮」— "can we add a draw-wall and an
+erase-wall button". Until now the cell you pressed on decided whether a drag built
+or rubbed out, which was invisible. Two buttons, `Draw` / `Erase`, now say what a
+stroke does; the default is Draw; the buttons are the verb's mode and are not
+counted as a sixth control. From the keyboard, Enter still toggles the cell under
+the cursor either way, so the keyboard path did not change. Written, committed and
+pushed by the advisor at the director's instruction, as for Decision 26.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–26 are recorded, 9 and 10 dissolved (25, the
+**None settled by me.** Decisions 1–27 are recorded, 9 and 10 dissolved (25, the
 speed control, is folded into `CLAUDE.md`'s cap entry and superseded by 26). Beat 4's
 fixture source is deferred to slice 8 as a condition, not an open question.
 
