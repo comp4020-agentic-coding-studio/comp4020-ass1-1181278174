@@ -15,7 +15,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
-import { loadEngine } from "./engine-api.ts";
+import { engine } from "./engine-api.ts";
 
 const SIM_DIR = resolve("src/sim");
 
@@ -27,9 +27,7 @@ function filesUnder(dir: string): string[] {
 }
 
 describe("η is blind to where the food is", () => {
-  it("gives the same choice distribution when the food moves", async () => {
-    const engine = await loadEngine();
-
+  it("gives the same choice distribution when the food moves", () => {
     // Identical terrain, different goal. With pheromone at the floor, nothing an
     // ant can legitimately read has changed, so nothing about its choice may.
     const asBuilt: Fixture = DOUBLE_BRIDGE;
@@ -54,11 +52,10 @@ describe("η is blind to where the food is", () => {
     }
   });
 
-  it("splits an unpheromoned choice without preferring the shorter way", async () => {
+  it("splits an unpheromoned choice without preferring the shorter way", () => {
     // At the floor the two branches are indistinguishable to an ant: one leads 8
     // moves to food, the other into a wall. A distance heuristic would tell them
     // apart; a constant or momentum-only η cannot.
-    const engine = await loadEngine();
     const state = engine.createColony(DOUBLE_BRIDGE, { rho: 0, seed: 1 });
     const split = engine.choiceDistribution(state, DOUBLE_BRIDGE.nest);
     const weights = [...split.values()];

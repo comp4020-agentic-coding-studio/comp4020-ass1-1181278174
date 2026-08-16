@@ -167,6 +167,21 @@ be green *before* the flip, not discovered during it.
 **How it was measured.** Run `31954015672` on `main`: `check` skipped, `deploy` skipped
 (`gh run view 31954015672 --json jobs`).
 
+### `tsconfig.json` only typechecked the root and `spec/`
+
+**What happened.** `pnpm typecheck` was green while `src/` and `scripts/` were not being
+looked at. The engine was about to land in `src/sim` entirely unchecked, and the check
+that would have said so was reporting success.
+
+**What is actually true.** `include` was `["*.ts", "spec"]` — a whitelist, not a
+default. It is now `["*.ts", "spec", "src", "scripts"]`. A green typecheck means
+nothing until you know what is in scope.
+
+**How it was measured.** Widening `include` immediately surfaced five pre-existing type
+errors in the starter's own `scripts/check-evidence.ts` (`toSorted` against an ES2022
+`lib`), fixed by moving `lib` to ES2023 — which the code already relied on at runtime.
+Five errors in a file that had shipped, under a check that had always been green.
+
 ## Before you commit the page
 
 `lang` on `<html>` · non-empty `<title>` · viewport meta · exactly one `<h1>` · `alt` on every

@@ -1,102 +1,125 @@
 // The headless engine sensor: `pnpm spike`.
 //
-// A named sensor, not a scratch file. It prints the reading, an ASCII map and the
-// fixture parameters — and no conclusion about lock-in is recorded anywhere without
-// the parameters it prints, because lock-in sharpness depends on the choice
-// nonlinearity and the pheromone floor, not on the deposit rule alone.
+// EXPLORATORY ONLY. It derives no thresholds and records no conclusions beyond what
+// the numbers were. Deriving a threshold means two-sided separation against the
+// negative controls with a stated margin on each side (spec/oracles.md §3), and none
+// of that happens here.
 //
-// There is no engine yet, so it says so and prints the fixture instead. That is the
-// point: the sensor exists before the thing it measures.
+// Every run prints h, k and floor, because lock-in sharpness depends on them: at
+// h = 1 lock-in is weak BY CONSTRUCTION, so a run that fails to lock in without
+// stating h supports no conclusion about deposit mode 1b at all.
 
 import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
 import type { Fixture, NodeId } from "../src/fixtures/double-bridge.ts";
 import { induce, pathLength } from "../src/fixtures/graph.ts";
 import { shortestPathLength } from "../src/oracle/bfs.ts";
-
-const ENGINE_MODULE = "../src/sim/engine.ts";
-const STEPS = Number(process.env.SPIKE_STEPS ?? 2000);
+import * as engine from "../src/sim/engine.ts";
+import { reading } from "../src/sim/reading.ts";
 
 const fixture: Fixture = DOUBLE_BRIDGE;
+
+// Placeholders, not derived. Named so nobody reads them as settled.
+const SETTLE = 2000;
+const AFTER = 3000;
+const SAMPLE_EVERY = 500;
+const WINDOW = 300;
+const MIN_TRIPS = 30;
+
 const closed = induce(fixture, { openShortcut: false });
 const open = induce(fixture, { openShortcut: true });
+const BFS_CLOSED = shortestPathLength(closed, fixture.nest, fixture.food) as number;
+const BFS_OPEN = shortestPathLength(open, fixture.nest, fixture.food) as number;
 
-const wallBetween = (a: NodeId, b: NodeId): boolean =>
-  !open.openEdges.some(
-    (edge) =>
-      ((edge.a === a && edge.b === b) || (edge.a === b && edge.b === a)) &&
-      edge.closed !== true,
-  ) ||
-  fixture.edges.some(
-    (edge) =>
-      ((edge.a === a && edge.b === b) || (edge.a === b && edge.b === a)) &&
-      edge.closed === true,
-  );
+const interior = (branch: readonly NodeId[]) =>
+  new Set(branch.slice(1, -1));
+const SHORT = interior(fixture.branches.short);
+const LONG = interior(fixture.branches.long);
 
-/** `--` open, `==` a wall. The map has to show which segment is shut. */
-function drawBranch(label: string, path: readonly NodeId[]): string {
-  const parts: string[] = [String(path[0])];
-  for (let i = 0; i + 1 < path.length; i += 1) {
-    const a = path[i] as NodeId;
-    const b = path[i + 1] as NodeId;
-    parts.push(wallBetween(a, b) ? "==" : "--", String(b));
-  }
-  return `  ${label.padEnd(6)}${parts.join("")}`;
+/** Share of ants standing on the short branch's interior, of those on either. */
+function shortShare(colony: engine.Colony): string {
+  const nodes = engine.antNodes(colony);
+  const onShort = nodes.filter((node) => SHORT.has(node)).length;
+  const onLong = nodes.filter((node) => LONG.has(node)).length;
+  const both = onShort + onLong;
+  return both === 0 ? "  n/a" : `${((onShort / both) * 100).toFixed(0).padStart(4)}%`;
 }
 
-function report(): void {
-  const bfsClosed = shortestPathLength(closed, fixture.nest, fixture.food);
-  const bfsOpen = shortestPathLength(open, fixture.nest, fixture.food);
+/** Edge pheromone as digits 0-9, scaled to the busiest edge in this colony. */
+function map(colony: engine.Colony): string[] {
+  let peak = 0;
+  for (const edge of fixture.edges) {
+    const { home, food } = engine.edgePheromone(colony, edge.a, edge.b);
+    peak = Math.max(peak, home + food);
+  }
+  const draw = (label: string, path: readonly NodeId[]) => {
+    const parts: string[] = [String(path[0])];
+    for (let i = 0; i + 1 < path.length; i += 1) {
+      const a = path[i] as NodeId;
+      const b = path[i + 1] as NodeId;
+      const shut = fixture.edges.some(
+        (edge) =>
+          ((edge.a === a && edge.b === b) || (edge.a === b && edge.b === a)) &&
+          edge.closed === true &&
+          !(edge.shortcut && colony.shortcutOpen),
+      );
+      const { home, food } = engine.edgePheromone(colony, a, b);
+      const digit = peak > 0 ? Math.min(9, Math.floor((9 * (home + food)) / peak)) : 0;
+      parts.push(shut ? "-#-" : `-${digit}-`, String(b));
+    }
+    return `    ${label.padEnd(6)}${parts.join("")}`;
+  };
+  return [draw("short", fixture.branches.short), draw("long", fixture.branches.long)];
+}
 
+function show(colony: engine.Colony, against: number, label: string): void {
+  const result = reading(engine.completedTripLengths(colony), against, {
+    window: WINDOW,
+    minTrips: MIN_TRIPS,
+  });
+  const ratio =
+    result.ratio === null ? "no reading yet" : `${result.ratio.toFixed(3)}x`;
+  console.log(
+    `    ${label.padEnd(14)}${ratio.padStart(14)}   short-branch ants ${shortShare(colony)}   trips ${engine.completedTripLengths(colony).length}`,
+  );
+}
+
+function header(): void {
   console.log(`fixture   ${fixture.name}`);
   console.log(
-    `graph     ${fixture.nodes.length} nodes, ${fixture.edges.length} edges ` +
-      `(${closed.openEdges.length} open at load)`,
+    `graph     ${fixture.nodes.length} nodes, ${fixture.edges.length} edges; ` +
+      `long ${pathLength(fixture.branches.long)} moves, short ${pathLength(fixture.branches.short)} moves`,
   );
-  console.log("");
-  console.log(drawBranch("short", fixture.branches.short));
-  console.log(drawBranch("long", fixture.branches.long));
-  console.log("            == is a wall: the shortcut, shut until the visitor opens it");
-  console.log("");
+  console.log(`bfs       ${BFS_CLOSED} closed  ->  ${BFS_OPEN} open`);
   console.log(
-    `branches  long ${pathLength(fixture.branches.long)} moves, ` +
-      `short ${pathLength(fixture.branches.short)} moves, ` +
-      `ratio ${pathLength(fixture.branches.long) / pathLength(fixture.branches.short)}`,
-  );
-  console.log(`bfs       ${bfsClosed} moves closed  ->  ${bfsOpen} moves open`);
-  console.log("");
-  console.log(
-    `params    h=${fixture.params.h}  k=${fixture.params.k}  ` +
-      `floor=${fixture.params.floor}`,
+    `params    h=${fixture.params.h}  k=${fixture.params.k}  floor=${fixture.params.floor}   (fixture, authoritative in spec/oracles.md)`,
   );
   console.log(
-    "          h is the choice nonlinearity (k+t)^h. At h=1 lock-in is weak BY",
+    `run       SETTLE=${SETTLE} then ${AFTER} after opening; window=${WINDOW} trips, minTrips=${MIN_TRIPS}`,
   );
-  console.log(
-    "          CONSTRUCTION, so a failure to lock in at h=1 is not evidence",
-  );
-  console.log("          against deposit mode 1b.");
-  console.log("");
+  console.log(`          ALL PLACEHOLDERS, NOT DERIVED — exploratory only.`);
 }
 
-async function main(): Promise<void> {
-  report();
+function trial(rho: number): void {
+  console.log("");
+  console.log(`rho = ${rho}`);
+  const colony = engine.createColony(fixture, { rho, seed: 1 });
 
-  try {
-    await import(ENGINE_MODULE);
-  } catch {
-    console.log(`reading   no engine — ${ENGINE_MODULE} does not exist yet.`);
-    console.log(
-      `          Nothing has been measured, so nothing may be concluded.`,
-    );
-    return;
+  for (let i = 0; i < SETTLE; i += 1) engine.step(colony);
+  show(colony, BFS_CLOSED, `settle ${SETTLE}`);
+  for (const line of map(colony)) console.log(line);
+
+  engine.toggleShortcut(colony);
+  console.log(`    -- shortcut opened, now measured against BFS ${BFS_OPEN} --`);
+
+  for (let done = 0; done < AFTER; done += SAMPLE_EVERY) {
+    for (let i = 0; i < SAMPLE_EVERY; i += 1) engine.step(colony);
+    show(colony, BFS_OPEN, `+${done + SAMPLE_EVERY}`);
   }
-
-  console.log(
-    `reading   an engine exists but this sensor has not been wired to it yet.`,
-  );
-  console.log(
-    `          Wire it before reading anything into ${STEPS} steps of output.`,
-  );
+  for (const line of map(colony)) console.log(line);
+  console.log(`    digest ${engine.digest(colony)}`);
 }
 
-await main();
+header();
+for (const rho of [0, 0.05, 1]) trial(rho);
+console.log("");
+console.log("Nothing above is a derived threshold. What the numbers were, only.");

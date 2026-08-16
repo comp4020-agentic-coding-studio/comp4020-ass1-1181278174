@@ -10,6 +10,18 @@
 // a test that merely fails.
 
 export type ThresholdName =
+  /**
+   * Steps the colony runs BEFORE the shortcut opens, for the long trail to
+   * establish. Not a bound on anything — `M` is the switch bound only.
+   */
+  | "SETTLE"
+  /**
+   * Ratio at or below which a near-shortest path counts as having emerged.
+   * Behaviour (1) measures emergence on its own terms — how close to the only
+   * route available the ants actually get — which is a different claim from
+   * `SWITCHED`, the ratio that means they left the long way behind.
+   */
+  | "EMERGED"
   /** Ratio at or above which the colony counts as NOT having switched. */
   | "LOCKED"
   /** Ratio below which the colony counts as having switched. */
@@ -28,6 +40,8 @@ export type ThresholdName =
   | "MIN_TRIPS";
 
 export const THRESHOLDS: Record<ThresholdName, number | null> = {
+  SETTLE: null,
+  EMERGED: null,
   LOCKED: null,
   SWITCHED: null,
   UNSTABLE: null,
