@@ -72,9 +72,9 @@ the count to five never exists.
 Not a control, so it does not spend the cap — but it spends phone-viewport space
 and it is the second thing the visitor looks at.
 
-- **The ratio**, as a number: the median trip length over the last `N_trips`
-  **completed food→nest trips**, over the BFS shortest path. Below a minimum trip
-  count it reads **"no reading yet"**, never a number.
+- **The ratio**, as a number: the **mean** trip length over the last `N_trips`
+  **completed food→nest trips**, over the BFS shortest path (Decision 5 as amended).
+  Below a minimum trip count it reads **"no reading yet"**, never a number.
 - **A thin history trace** (Decision 3): the same number plotted against steps.
   One line, a 1.0× baseline, a vertical tick where the shortcut opens. A thin
   strip under the canvas at 390.
@@ -101,11 +101,12 @@ already in use below for a count of steps.
 
 ## The core interaction — contract
 
-The readout is decided (Decision 5: **median over the last `N_trips` completed
-food→nest trips**); the numbers are derived, not chosen (see `spec/oracles.md`).
+The readout is decided (Decision 5 as amended: **mean over the last `N_trips`
+completed food→nest trips**); the numbers are derived, not chosen (see
+`spec/oracles.md`).
 
 > The visitor opens a shortcut on the committed double-bridge fixture, then sets
-> the forgetting rate. The readout shows the median trip length over the last
+> the forgetting rate. The readout shows the mean trip length over the last
 > `N_trips` completed food→nest trips, as a ratio of the BFS shortest path.
 >
 > - at forgetting = 0, the ratio stays at or above `LOCKED` for `N` steps after
@@ -312,6 +313,29 @@ invariant on `η`*, and lands as a test in `spec/oracles.md`.
 > non-thresholded readout: the share of ants currently on the shorter branch (it
 > moves before the median does). Trip length and BFS length are in the same unit —
 > moves between the two arrival zones.
+
+**Amendment — 2026-08-17, director, verbatim.** The reading is the windowed **mean**,
+not the median. Same window `N_trips`, same `MIN_TRIPS` rule, same one function for
+UI / trace / tests. The reason, as given:
+
+> on a two-valued fixture the median is a step function (2.000× or 1.000×, nothing
+> between) and at ρ = 0.3 it reported 2.000× while 48% of trips were short; the mean
+> equals 2 − short-trip share to three decimals across every row, is continuous and
+> monotone in what the visitor watches, and separates ρ = 0.03 from 0.05 where the
+> median cannot.
+
+The median stays available in the spike, for comparison only. Cited:
+`docs/spikes/2026-08-17-rho-sweep.md`.
+
+This is the amendment worth remembering. The original decision was *right on its
+reasoning* — a median is the robust choice, and robustness is normally what a
+readout wants. It was wrong on this fixture, and only measuring both side by side
+showed it. Nothing about the argument for the median was refuted; the fixture simply
+had two values in it.
+
+**Default `ρ` = 0.12.** Ten seeds of ten switch, at a median of 1000 steps after the
+shortcut opens, with zero re-crossings above 1.5×. Cited:
+`docs/spikes/2026-08-17-rho-fine.md`.
 
 ### Decision 2 — drawing walls
 
@@ -531,19 +555,37 @@ simulation is fixed-step. No threshold moves.
 - **Decision 10** (which application sentences survive) — answered by Decision 4:
   all three, independent of beat 4.
 
+### Decision 11 — the slider
+
+**Linear 0.00–0.25, step 0.01, default 0.12.** Left label *"never forget"*, right
+label *"forget everything"*.
+
+`ρ = 1` is out of range and stays out: it sets `keep = 0`, wiping pheromone every
+step — total amnesia, a pure random walk, every edge reading zero. That is a
+degenerate end-stop, not forgetting too fast.
+
+Regimes on this fixture, measured (`docs/spikes/2026-08-17-rho-fine.md`):
+
+| ρ | what the visitor sees |
+|---|---|
+| ≤ 0.08 | locked on the old road — 10/10 seeds never come down |
+| 0.10–0.12 | switches within seconds — 0.12 in 10/10, median 1000 steps, no re-crossings |
+| ≥ 0.16 | no dominant path — plateau ≈ 1.5×, about a quarter of ants on the short branch |
+
+Two consequences, and they are the point of having measured it:
+
+- **Behaviour (4) is measured at the slider maximum, 0.25** — not at `ρ = 1`, which
+  is off the control entirely. "Never stabilises" has to mean a trail that exists
+  and will not settle, not a graph where no trail forms.
+- **Beat 3's wording follows the data.** The high end is *"too fast, and they never
+  settle on either"* — **not** "nothing forms". At ρ ≥ 0.16 something is very much
+  happening; it just never picks a side. Writing "nothing forms" would have been a
+  sentence the simulation contradicts.
+
 ## Open decisions
 
-11. **Beat 3 — the slider's range and mapping.** Not decided; recorded because the
-    spike measured it. `ρ = 1` sets `keep = 1 − ρ = 0`, so pheromone is wiped every
-    single step: total amnesia, a pure random walk, every edge reading zero. That is
-    a degenerate end-stop, not "forgetting too fast", and the visitor drags this
-    control — so the range the slider exposes and how its position maps to `ρ` is a
-    design question with more than one reasonable answer. It also bears on behaviour
-    (4), whose "never stabilises" needs a regime where a trail exists and fails to
-    settle, rather than one where no trail forms at all.
-
-Decisions 1–8 are settled, 9 and 10 dissolved. The spike is unblocked and nothing
-in slice 1 is waiting on a call.
+**None.** Decisions 1–11 are settled, 9 and 10 dissolved. Beat 4's fixture source is
+deferred to slice 8 as a condition, not an open question.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its
 own condition (a), and beat 4's fixture source is explicitly deferred to slice 8.

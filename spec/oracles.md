@@ -152,12 +152,24 @@ Open: whether we also assert the browser reproduces the headless digest.
 
 ### The reading — one definition, one function
 
-Per Decision 5, **the reading** is: the median trip length over the last
-`N_trips` completed food→nest trips, divided by the BFS shortest path.
+Per Decision 5 **as amended 2026-08-17**, **the reading** is: the **mean** trip
+length over the last `N_trips` completed food→nest trips, divided by the BFS
+shortest path.
 
+- It was the median. The sweep showed the median is a **step function** on a
+  two-valued fixture — trips here are 4 moves or 8, so it reads 2.000× or 1.000× and
+  nothing between, and at ρ = 0.3 it reported 2.000× while 48% of trips were short.
+  The mean equals `2 − short-trip share` to three decimals across every row, is
+  continuous and monotone in what the visitor watches, and separates ρ = 0.03 from
+  ρ = 0.05 where the median cannot. Cited:
+  `docs/spikes/2026-08-17-rho-sweep.md`. The median stays in the spike for
+  comparison only.
+- The cost, accepted: a mean is not robust to an outlier where a median is. On this
+  fixture trips cannot be wild, so it is a fair price — and `spec/reading.test.ts`
+  asserts the trade in both directions rather than only the flattering one.
 - The window counts **completed trips**, not steps. Trips on the shortcut complete
   faster, so the window flushes faster after a switch; and under ρ = 0 the long
-  trips keep completing, so the median stays legitimately high instead of decaying
+  trips keep completing, so the reading stays legitimately high instead of decaying
   by arithmetic. A step window would blur both moments the page exists to show.
 - **Unit**: trip length and BFS length are both counted in moves between the two
   arrival zones, so the ratio is dimensionless.
@@ -281,6 +293,24 @@ it. A negative control that isn't kept around stops being one.
 The `η`-encodes-distance mutant is the one to keep an eye on: it is the only wrong
 engine that makes the page look **better**. A page can fail honestly by breaking;
 it fails dishonestly by working for a reason it denies.
+
+### The slider's range, and where behaviour (4) is measured
+
+Decision 11. The slider is **linear 0.00–0.25, step 0.01, default 0.12**, and `ρ = 1`
+is off the control entirely.
+
+| ρ | regime, measured |
+|---|---|
+| ≤ 0.08 | locked on the old road (10/10 seeds never come down) |
+| 0.10–0.12 | switches (0.12 in 10/10, median 1000 steps, zero re-crossings) |
+| ≥ 0.16 | no dominant path — plateau ≈ 1.5×, ~¼ of ants on the short branch |
+
+Cited: `docs/spikes/2026-08-17-rho-fine.md`.
+
+**Behaviour (4) is therefore measured at ρ = 0.25, the slider maximum — never at
+ρ = 1.** At ρ = 1 pheromone is wiped every step and no trail forms at all, so a test
+there would assert against a degenerate graph rather than against forgetting. "Never
+stabilises" must mean a trail that exists and will not settle.
 
 ### Spike watch — what could produce a false negative
 

@@ -24,8 +24,10 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
   ant only leaves a little scent and follows scent" and "nobody planned that road". Verified
   by a cold read (two people with no background) — no test can hold it.
 - **Three controls, hard cap:** toggle a wall cell (one verb: opens the shortcut, closes a
-  street, free-draws in the epilogue) · forgetting rate (native `<input type=range>`) · run /
-  pause / reset — pause **visible**, because WCAG 2.2.2 applies and the sim runs indefinitely.
+  street, free-draws in the epilogue) · forgetting rate — native `<input type=range>`, linear
+  **0.00–0.25 step 0.01, default 0.12**, "never forget" to "forget everything"; behaviour (4)
+  is measured at the maximum 0.25, never at ρ = 1, which is off the control (Decision 11) ·
+  run / pause / reset — pause **visible**, because WCAG 2.2.2 applies and the sim runs forever.
   The epilogue is invariant tests only, no thresholds (the list is in `PLAN.md`), because a
   visitor's own maze has no correct answer.
 - **Prose ≤ 8 sentences:** 6 argument + 1 citation + 1 carrying all three applications (ends
@@ -51,8 +53,10 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
   trade-offs, mine to make.
 - **Required behaviours, proven headless before any UI:** the four behaviours, `PLAN.md`.
   **«If 1b cannot, we reopen Decision 1 toward 1a — we do not tune thresholds to pass.»**
-- **The reading:** median trip length over the last `N_trips` completed food→nest trips,
-  divided by BFS shortest — same unit, moves between the two arrival zones. Below `MIN_TRIPS`
+- **The reading:** **mean** trip length over the last `N_trips` completed food→nest trips,
+  divided by BFS shortest — same unit, moves between the two arrival zones. Mean, not
+  median: on a two-valued fixture the median is a step function, and at ρ = 0.3 it read
+  2.000× while 48% of trips were short (Decision 5, amended). Below `MIN_TRIPS`
   it says "no reading yet", never a number. **One function** computes it for the UI, the trace
   and the tests. The secondary readout (share of ants on the shorter branch) is never
   thresholded.
