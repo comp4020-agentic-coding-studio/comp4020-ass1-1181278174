@@ -12,13 +12,22 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
 
 ## This prototype
 
-- **The claim (h1 draft):** *The colony's intelligence is not in any ant. It is in how fast
-  they forget.* Four beats, one mechanic — a trail forms from nothing, a shortcut opens, the
-  colony stays locked to the long way, the forgetting slider breaks it out; see `PLAN.md`.
-  Beats 1–3 are the assignment. Beat 4 (a Canberra street fixture) is a re-skin, scheduled
-  last, cut without negotiation if it needs **«a new verb, a new readout, a new control, or
-  more than 3 sentences of its own»**. A second mechanic (parameter panel, traffic model, TSP,
-  graph routing, a third scene, algorithm comparison) is out — say so instead of building it.
+- **The claim (h1 draft, B′ — Decision 22):** *No ant knows the map. The colony still finds
+  its way — as long as it forgets, and not too fast.* Four beats, one mechanic — a road grows
+  from nothing; you block it, and with no forgetting they pour into the dead end and a ghost
+  road holds them there; a little forgetting heals the break in about a second; too much and no
+  road survives. See `PLAN.md`. **The verb is blocking the road, not opening a shortcut.**
+  Beat 4 (a Canberra street fixture) is a re-skin, scheduled last, cut without negotiation if
+  it needs **«a new verb, a new readout, a new control, or more than 3 sentences of its own»**.
+  A second mechanic (parameter panel, traffic model, TSP, graph routing, a third scene,
+  algorithm comparison) is out — say so instead of building it.
+- **What replaced the old claim, and why it is not negotiable back.** B said a middle band of
+  forgetting makes the colony switch to a shortcut you open. On the field that is **false**:
+  lock-in is absolute — an established road holds at 2.07× with **0% of trips through the
+  doorway at every ρ tried**, and moving the slider afterwards changes nothing
+  (`docs/spikes/2026-08-17-field-v2-sequence-advisor.md`). A wander knob ε was spiked to buy
+  the switch and rejected on the evidence (Decision 21). This is also what Goss and Deneubourg
+  found in real ants. "They never take the shortcut you open" is now a footnote, not a beat.
 - **Beat 1 is live emergence.** Zero pheromone at load, nothing pre-baked. The opening, not a
   tutorial: after ≤ 2 of the six argument sentences a visitor with no background can say "each
   ant only leaves a little scent and follows scent" and "nobody planned that road". Verified

@@ -242,3 +242,48 @@ guard was doing anything.
 **Citation.** This commit — `scripts/spike-graded.ts` (the `credible()` gate and
 its comment), `docs/spikes/2026-08-17-field-graded.md`.
 
+### 2026-08-17 — the claim was wrong, and the spike that proved it was the director's
+
+**What happened.** The page's claim — a middle band of forgetting makes the
+colony leave a long road for a shortcut you open — is false on this field. Not
+marginal, not needing a finer sweep: an established road holds at 2.07× with
+**0% of trips through the doorway at every ρ tried**, and a fifth knob (a wander
+rate ε) bought nothing but a ruined road. The director found this by running four
+spikes outside the repo while the agent was building the page against the claim.
+
+**What I did instead of the obvious thing.** The obvious thing was to take the
+director's conclusion, write the new claim into `CLAUDE.md`, and move on — the
+finding was theirs, the numbers were in their files, and re-running someone
+else's spikes looks like distrust.
+
+Instead the four scripts came **into `scripts/`** and were re-run here, and the
+outputs diffed against theirs line by line: **zero differing lines** across all
+four, apart from the run-time stamp. That converts "the director says so" into
+"the repo says so, and anyone can check", which is the difference between a
+finding and a citation. Provenance is recorded explicitly in `PLAN.md` — the
+director ran these first, the agent reproduced them — because a build log that
+silently absorbs someone else's work misrepresents who found what.
+
+The ε patch got the same treatment in reverse. It is applied to run Stage D and
+reverted immediately, so the engine never carries a knob nobody adopted — and
+`scripts/spike-staged.ts` now **refuses to print a table** unless the patch is
+present. Without that guard the script runs fine with ε silently ignored, every
+arm collapses to ε = 0, and it emits a full set of numbers that all say the same
+thing. A crash is recoverable; a table that looks like evidence is not.
+
+**How I knew it was right.** Three checks, each of which could have gone the
+other way. The four reproductions matched byte for byte. The 34 frozen bridge
+digests stayed identical **with the ε patch applied**, which is the patch's own
+claim about drawing no random number at ε = 0, tested rather than believed. And
+the guard was run both ways: it throws without the patch and passes with it.
+
+One more thing came out of reproducing rather than accepting. Re-running the
+blocking experiment in the order a *visitor* performs it — settle at the page's
+default, then move the slider — showed the ghost road that beat 2 rests on needs
+the colony to have lived at ρ = 0 from the start; from the default it heals in
+250 steps, not 4,500. That is a constraint on the new claim, found only because
+the spikes were re-run in the repo rather than filed.
+
+**Citation.** This commit — `CLAUDE.md` (the claim and the four beats),
+`PLAN.md` (Decisions 21 and 22), `docs/harness-log.md`.
+
