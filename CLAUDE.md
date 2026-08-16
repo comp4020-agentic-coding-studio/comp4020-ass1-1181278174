@@ -37,11 +37,22 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
   tutorial: after ≤ 2 of the six argument sentences a visitor with no background can say "each
   ant only leaves a little scent and follows scent" and "nobody planned that road". Verified
   by a cold read (two people with no background) — no test can hold it.
-- **Three controls, hard cap:** toggle a wall cell (one verb: opens the shortcut, closes a
-  street, free-draws in the epilogue) · forgetting rate — native `<input type=range>`, linear
-  **0.00–0.25 step 0.01, default 0.12**, "never forget" to "forget everything"; behaviour (4)
-  is measured at the maximum 0.25, never at ρ = 1, which is off the control (Decision 11) ·
-  run / pause / reset — pause **visible**, because WCAG 2.2.2 applies and the sim runs forever.
+- **Four controls, hard cap** (was three; amended with the speed control, Decision 25):
+  **draw a wall** — the one verb, a drag on the canvas itself, with no button; press on open
+  ground to build and on a wall to rub out, the cell you press deciding which the whole stroke
+  does. Keyboard: arrow keys move a visible cursor, Enter toggles, Escape hides it ·
+  **forgetting rate** — native `<input type=range>`, "never forget" to "forget everything",
+  default measured rather than chosen (`FIELD_RHO`) · **speed** — 75 / 150 / 300 steps per
+  second, a native radio group, default 150 · **run / pause / reset** — pause **visible**,
+  because WCAG 2.2.2 applies and the sim runs forever. `Clear walls` is an undo for the verb
+  and appears only once there is something to undo; `Watch it grow` is the run control under
+  `prefers-reduced-motion`. Neither is a fifth control.
+  **Why the cap moved from three to four.** The other three each change what the colony DOES;
+  speed changes only how fast you watch it do it — the engine is fixed-step, so the same step
+  count gives the same colony at 75 as at 300, and `spec/loop.test.ts` holds that. A control
+  that cannot change the outcome is not competing for what the cap protects, which is the
+  visitor's attention on the argument. The cap still forbids a second mechanic: ant count,
+  pheromone strength, random obstacles and ε all stay out.
   The epilogue is invariant tests only, no thresholds (the list is in `PLAN.md`), because a
   visitor's own maze has no correct answer.
 - **Prose ≤ 8 sentences:** 6 argument + 1 citation + 1 carrying all three applications (ends
