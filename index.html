@@ -23,7 +23,7 @@
       <canvas
         id="stage"
         role="img"
-        aria-label="A field of open ground with a wall down the middle and a few solid blocks. A blue disc on the left is the nest, a green disc on the right is the food. Four hundred ants move between them, and the scent they leave glows on the ground they use. The wall has a gap in it, closed, directly between the two."
+        aria-label="Open ground scattered with solid blocks. A blue disc on the left is the nest, a green disc on the right is the food. Four hundred ants move between them, and the scent they leave glows on the ground they use."
       ></canvas>
 
       <ul class="legend" aria-label="What you are looking at">
@@ -38,20 +38,16 @@
       <section id="reading" class="readout">
         <p id="readout" class="number" aria-live="polite">no reading yet</p>
         <p id="readout-note" class="note">warming up</p>
-        <p id="share" class="note secondary">the gap is shut</p>
+        <p id="share" class="note secondary">walls drawn: 0</p>
         <canvas
           id="strip"
           class="strip"
           role="img"
-          aria-label="How the reading has moved over time, with the moment the shortcut opened marked."
+          aria-label="How the reading has moved over time."
         ></canvas>
       </section>
 
       <section class="controls" aria-label="Controls">
-        <button id="wall" type="button" aria-pressed="false">
-          Open the gap in the wall
-        </button>
-
         <div class="slider">
           <label for="rho">Forgetting rate — <b id="rho-value">0.010</b></label>
           <input id="rho" type="range" min="0" max="0.05" step="0.001" value="0.01" />

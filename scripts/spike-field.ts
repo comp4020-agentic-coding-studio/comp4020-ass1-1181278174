@@ -20,13 +20,13 @@
 // h, k and floor are printed with every run, because lock-in sharpness depends on
 // them and a run that cannot report them supports no conclusion at all.
 
-import { FIELD, FIELD_SPEC } from "../src/fixtures/field.ts";
+import { FIELD_V3, FIELD_V3_SPEC } from "../src/fixtures/field-v3.ts";
 import { induce } from "../src/fixtures/graph.ts";
 import { shortestPathLength } from "../src/oracle/bfs.ts";
 import * as engine from "../src/sim/engine.ts";
 import { reading } from "../src/sim/reading.ts";
 
-const fixture = FIELD;
+const fixture = FIELD_V3;
 const ANTS = 400;
 const SEEDS = [1, 2, 3];
 
@@ -62,12 +62,12 @@ function nodeHeat(colony: engine.Colony): Map<string, number> {
 function map(colony: engine.Colony): string {
   const heat = nodeHeat(colony);
   const peak = Math.max(...heat.values(), 1);
-  const blocked = new Set(FIELD_SPEC.blocked);
-  const gaps = new Set(FIELD_SPEC.gaps.map(([x, y]) => `${x},${y}`));
+  const blocked = new Set(FIELD_V3_SPEC.blocked);
+  const gaps = new Set(FIELD_V3_SPEC.gaps.map(([x, y]) => `${x},${y}`));
   const rows: string[] = [];
-  for (let y = 0; y < FIELD_SPEC.height; y += 2) {
+  for (let y = 0; y < FIELD_V3_SPEC.height; y += 2) {
     let row = "";
-    for (let x = 0; x < FIELD_SPEC.width; x += 1) {
+    for (let x = 0; x < FIELD_V3_SPEC.width; x += 1) {
       const node = `${x},${y}`;
       if (node === fixture.nest) row += "N";
       else if (node === fixture.food) row += "F";
@@ -115,10 +115,10 @@ function firstFood(seed: number): { at: number | null; colony: engine.Colony } {
 function main(): void {
   console.log(`# Field spike — exploratory, derives nothing`);
   console.log();
-  console.log(`fixture   ${fixture.name}  ${FIELD_SPEC.width}x${FIELD_SPEC.height}`);
+  console.log(`fixture   ${fixture.name}  ${FIELD_V3_SPEC.width}x${FIELD_V3_SPEC.height}`);
   console.log(
     `graph     ${fixture.nodes.length} nodes, ${fixture.edges.length} edges, ` +
-      `${FIELD_SPEC.blocked.length} blocked cells`,
+      `${FIELD_V3_SPEC.blocked.length} blocked cells`,
   );
   console.log(
     `routes    long ${BFS_LONG} moves (round the wall), short ${BFS_SHORT} through the gap` +

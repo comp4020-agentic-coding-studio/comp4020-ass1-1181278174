@@ -10,7 +10,7 @@
 //    the road."
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { FIELD_SPEC } from "../src/fixtures/field.ts";
+import { FIELD_V3_SPEC } from "../src/fixtures/field-v3.ts";
 import { buildField } from "../src/fixtures/grid.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
 import { induce } from "../src/fixtures/graph.ts";
@@ -38,17 +38,17 @@ const ARM2 = {
   rhos: [0, 0.002, 0.005, 0.01, 0.015, 0.02, 0.05, 0.1],
 };
 
-const BASE = buildField(FIELD_SPEC);
-const K = FIELD_SPEC.params.k;
+const BASE = buildField(FIELD_V3_SPEC);
+const K = FIELD_V3_SPEC.params.k;
 const BFS_LONG = shortestPathBetween(
   induce(BASE, { openShortcut: false }),
-  FIELD_SPEC.nestZone,
-  FIELD_SPEC.foodZone,
+  FIELD_V3_SPEC.nestZone,
+  FIELD_V3_SPEC.foodZone,
 ) as number;
 const BFS_SHORT = shortestPathBetween(
   induce(BASE, { openShortcut: true }),
-  FIELD_SPEC.nestZone,
-  FIELD_SPEC.foodZone,
+  FIELD_V3_SPEC.nestZone,
+  FIELD_V3_SPEC.foodZone,
 ) as number;
 const VIA_GAP = (BFS_LONG + BFS_SHORT) / 2;
 
@@ -59,15 +59,15 @@ const VIA_GAP = (BFS_LONG + BFS_SHORT) / 2;
 // to run it; `assertWanderIsWired()` below refuses to produce numbers otherwise.
 function fixtureFor(eps: number, T = T_BASE): Fixture {
   return buildField({
-    ...FIELD_SPEC,
+    ...FIELD_V3_SPEC,
     params: {
-      ...FIELD_SPEC.params,
+      ...FIELD_V3_SPEC.params,
       gradedOver: T,
       whisker: WHISKER,
       straightBias: STRAIGHT,
       depositPerStep: D,
       wander: eps,
-    } as typeof FIELD_SPEC.params,
+    } as typeof FIELD_V3_SPEC.params,
   });
 }
 
@@ -211,14 +211,14 @@ function map(colony: engine.Colony): string {
     }
   });
   const peak = Math.max(...heat.values(), 1);
-  const blocked = new Set(FIELD_SPEC.blocked);
-  const nest = new Set(FIELD_SPEC.nestZone);
-  const food = new Set(FIELD_SPEC.foodZone);
-  const gaps = new Set(FIELD_SPEC.gaps.map(([x, y]) => `${x},${y}`));
+  const blocked = new Set(FIELD_V3_SPEC.blocked);
+  const nest = new Set(FIELD_V3_SPEC.nestZone);
+  const food = new Set(FIELD_V3_SPEC.foodZone);
+  const gaps = new Set(FIELD_V3_SPEC.gaps.map(([x, y]) => `${x},${y}`));
   const rows: string[] = [];
-  for (let y = 0; y < FIELD_SPEC.height; y += 2) {
+  for (let y = 0; y < FIELD_V3_SPEC.height; y += 2) {
     let row = "";
-    for (let x = 0; x < FIELD_SPEC.width; x += 1) {
+    for (let x = 0; x < FIELD_V3_SPEC.width; x += 1) {
       const node = `${x},${y}`;
       if (nest.has(node)) row += "N";
       else if (food.has(node)) row += "F";

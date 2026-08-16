@@ -8,7 +8,7 @@
 
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { FIELD, FIELD_SPEC } from "../src/fixtures/field.ts";
+import { FIELD_V4, FIELD_V4_SPEC } from "../src/fixtures/field-v4.ts";
 import type { Colony } from "../src/sim/engine.ts";
 import * as engine from "../src/sim/engine.ts";
 import { FIELD_RHO } from "../src/sim/rho.ts";
@@ -61,28 +61,24 @@ function pageWithCanvas(width: number, height: number) {
 
 describe("the field fixture carries everything the renderer needs", () => {
   it("gives every open cell a coordinate and nothing else", () => {
-    expect(FIELD.cells?.size).toBe(FIELD.nodes.length);
-    // Blocked cells are absent from the graph entirely — the renderer infers the
-    // wall from what is missing, so it cannot draw a wall the ants can walk
-    // through or leave one out that they cannot.
-    expect(FIELD.cells?.has("22,10")).toBe(false);
-    expect(FIELD.cells?.get("18,20")).toEqual([18, 20]);
+    expect(FIELD_V4.cells?.size).toBe(FIELD_V4.nodes.length);
+    // Blocked cells are absent from the graph entirely — the renderer infers a
+    // block from what is missing, so it cannot draw ground the ants cannot walk
+    // on, or leave out ground they can.
+    expect(FIELD_V4.cells?.has("17,19")).toBe(false);
+    expect(FIELD_V4.cells?.get("6,20")).toEqual([6, 20]);
   });
 
-  it("names the doorway cells, so the tap target is not guessed", () => {
-    expect(FIELD.gapCells).toEqual(["22,19", "22,20", "22,21"]);
-  });
-
-  it("names both arrival zones, so the discs are not guessed either", () => {
-    expect(FIELD.nestZone).toHaveLength(9);
-    expect(FIELD.foodZone).toHaveLength(9);
+  it("names both arrival zones, so the discs are not guessed", () => {
+    expect(FIELD_V4.nestZone).toHaveLength(9);
+    expect(FIELD_V4.foodZone).toHaveLength(9);
   });
 });
 
 describe("a resize mid-run only redraws", () => {
   /** The same seeded run every time; the callback is the only thing that varies. */
   const run = (onStep?: (colony: Colony, step: number) => void): string => {
-    const colony = engine.createColony(FIELD, {
+    const colony = engine.createColony(FIELD_V4, {
       rho: FIELD_RHO.default,
       seed: SEED,
       ants: ANTS,
@@ -96,7 +92,7 @@ describe("a resize mid-run only redraws", () => {
 
   it("leaves the engine byte-identical across a resize it really performed", () => {
     const page = pageWithCanvas(900, 500);
-    const view = createCanvasView(page.canvas, FIELD, LIGHT);
+    const view = createCanvasView(page.canvas, FIELD_V4, LIGHT);
     const before = view.size();
 
     const withResize = run((colony, i) => {
@@ -117,23 +113,19 @@ describe("a resize mid-run only redraws", () => {
     view.dispose();
   });
 
-  it("hit-tests the doorway against the box it currently has", () => {
+  it("reports no tap target anywhere, because v4 has no doorway", () => {
+    // The verb becomes drawing walls (Decision 22, turn B). Until then there is
+    // nothing on this canvas to touch, and `hitsGap` must say so everywhere
+    // rather than ringing a doorway at the origin.
     const page = pageWithCanvas(900, 500);
-    const view = createCanvasView(page.canvas, FIELD, LIGHT);
-    // The field is letterboxed, so the doorway is not at a fraction of the box —
-    // it is at a fraction of the FIELD, offset by the letterbox bars.
-    const scale = Math.min(900 / FIELD_SPEC.width, 500 / FIELD_SPEC.height);
-    const offsetX = (900 - FIELD_SPEC.width * scale) / 2;
-    const offsetY = (500 - FIELD_SPEC.height * scale) / 2;
-    const centre = {
-      x: offsetX + (FIELD_SPEC.gaps[1]?.[0] ?? 0 + 0.5) * scale,
-      y: offsetY + ((FIELD_SPEC.gaps[1]?.[1] ?? 0) + 0.5) * scale,
-    };
-    expect(view.hitsGap(centre.x, centre.y)).toBe(true);
-    // The nest is nowhere near it, or the single verb would fire on any tap.
-    expect(
-      view.hitsGap(offsetX + 18 * scale, offsetY + 20 * scale + 200),
-    ).toBe(false);
+    const view = createCanvasView(page.canvas, FIELD_V4, LIGHT);
+    for (const [x, y] of [
+      [0, 0],
+      [450, 250],
+      [899, 499],
+    ] as const) {
+      expect(view.hitsGap(x, y), `${x},${y} should not be a target`).toBe(false);
+    }
     view.dispose();
   });
 });

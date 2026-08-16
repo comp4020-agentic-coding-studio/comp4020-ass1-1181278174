@@ -53,6 +53,7 @@ interface Grid {
   readonly edgeA: Int32Array;
   readonly edgeB: Int32Array;
   readonly gapCentre: { readonly x: number; readonly y: number };
+  readonly hasGap: boolean;
 }
 
 function gridOf(fixture: Fixture): Grid {
@@ -125,6 +126,7 @@ function gridOf(fixture: Fixture): Grid {
       x: count === 0 ? 0 : sumX / count,
       y: count === 0 ? 0 : sumY / count,
     },
+    hasGap: count > 0,
   };
 }
 
@@ -306,6 +308,32 @@ export function createCanvasView(
       }
     }
 
+    // Faint cell lines inside the blocks, so a block reads as made of the same
+    // cells the ants walk on rather than as a shape pasted over them. Skipped
+    // below ~4px a cell, where the lines would be most of the block.
+    if (scale >= 4) {
+      ctx.save();
+      ctx.strokeStyle = palette.ground;
+      ctx.globalAlpha = 0.16;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let y = 0; y < grid.rows; y += 1) {
+        for (let x = 0; x < grid.columns; x += 1) {
+          const cell = y * grid.columns + x;
+          const solid =
+            grid.open[cell] !== 1 ||
+            (grid.gap[cell] === 1 && !colony.shortcutOpen);
+          if (!solid) continue;
+          ctx.moveTo(px(x), py(y));
+          ctx.lineTo(px(x + 1), py(y));
+          ctx.moveTo(px(x), py(y));
+          ctx.lineTo(px(x), py(y + 1));
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     const disc = (cellFlags: Uint8Array, colour: string) => {
       let sumX = 0;
       let sumY = 0;
@@ -328,7 +356,10 @@ export function createCanvasView(
     // The ants. A dot each, black, with a deterministic sub-cell offset so four
     // hundred of them in a crowd read as a crowd rather than as one dot.
     ctx.fillStyle = palette.ant;
-    const radius = Math.max(1.05, scale * 0.3);
+    // Decision 22 (7): 4-5 px across at 1920, never under 2 px at 390. Fixed in
+    // PIXELS, not in cells — proportional sizing gave 12 px blobs at 1920 and
+    // the ants stopped reading as ants.
+    const radius = Math.max(1.05, Math.min(2.5, scale * 0.3));
     for (let ant = 0; ant < colony.at.length; ant += 1) {
       const cell = grid.cellOf[colony.at[ant] as number] as number;
       if (cell < 0) continue;
@@ -345,8 +376,9 @@ export function createCanvasView(
       ctx.fill();
     }
 
-    // The tap target. The one thing on this canvas the visitor may touch, so it
-    // is marked whether the doorway is open or shut — the verb toggles both ways.
+    // The tap target, on a fixture that has one. v4 has no doorway — the verb
+    // becomes drawing walls — so there is nothing here to ring.
+    if (grid.hasGap) {
     ctx.save();
     ctx.strokeStyle = palette.gapRing;
     ctx.lineWidth = 2;
@@ -362,6 +394,7 @@ export function createCanvasView(
     );
     ctx.stroke();
     ctx.restore();
+    }
 
     ctx.restore();
   }
@@ -388,6 +421,7 @@ export function createCanvasView(
     resize: onWindowResize,
     size: () => ({ width, height }),
     hitsGap(clientX, clientY) {
+      if (!grid.hasGap) return false;
       const box = canvas.getBoundingClientRect();
       return (
         Math.hypot(

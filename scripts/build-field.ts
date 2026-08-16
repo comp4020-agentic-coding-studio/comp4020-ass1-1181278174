@@ -1,15 +1,18 @@
-// Generates src/fixtures/field.ts. `pnpm build:field`.
+// Generates the field fixtures. `pnpm build:field`.
 //
-// The field is data somebody designed, so it is committed and a diff test guards
-// it (spec/field.test.ts re-runs this and compares). Never hand-edit the output.
+// Two of them, both committed data with a diff test (spec/field.test.ts re-runs
+// this and compares). Never hand-edit the output.
 //
-// What is designed here is the geometry — where the wall runs, where its gap is,
-// where the obstacle blocks stand. Everything else (nodes, edges, the two branch
-// paths) is computed from it, so the picture and the numbers cannot disagree.
+//   v3 — the wall-and-doorway field. KEPT, not deleted: every spike in
+//        docs/spikes/ was measured on it, and a record whose fixture no longer
+//        exists is not a record. Only those scripts point at it now.
+//   v4 — Decision 22's field: no wall, no doorway, open ground with scattered
+//        blocks. The verb becomes drawing walls, so the fixture must not ship
+//        with the one wall that mattered already in it.
 //
-// The target the geometry is tuned to is the double bridge's: the long way round
-// the wall is about TWICE the way through the gap. That ratio is what makes the
-// colony's refusal to switch legible — at 1.2× nobody would care.
+// What is designed here is the geometry. Everything else — nodes, edges, the
+// two branch paths — is computed from it, so the picture and the numbers cannot
+// disagree.
 
 import { writeFileSync } from "node:fs";
 import type { NodeId } from "../src/fixtures/double-bridge.ts";
@@ -21,44 +24,73 @@ import { shortestPathBetween } from "../src/oracle/bfs.ts";
 const WIDTH = 60;
 const HEIGHT = 40;
 
-// Field v2 (Decision 18). v1 put the gap 19 cells off the road, so discovering
-// it took a 19-cell excursion and almost no ant ever made one — the disguise was
-// wrong. On the double bridge the shortcut is a fork ON the road that every ant
-// passes. So: the wall runs from the nest's eye-line all the way to the bottom
-// edge, the gap is a three-cell doorway directly between nest and food, and the
-// only way round is the passage along the top. No perimeter corridor.
+/** The engine parameters both fields carry. Decision 19, still provisional. */
+const PARAMS = {
+  h: 2,
+  k: 20,
+  floor: 0,
+  gradedOver: 80,
+  whisker: 3,
+  straightBias: 4,
+  depositPerStep: 20,
+} as const;
 
-const NEST: Cell = [18, 20];
-const FOOD: Cell = [50, 20];
+type Rect = readonly [number, number, number, number];
 
-/** Touches the bottom edge on purpose: the top passage is the ONLY long way. */
-const WALL_X = 22;
-const WALL_TOP = 6;
-const WALL_BOTTOM = HEIGHT - 1;
+// --- v3: the wall-and-doorway field (frozen; the spikes cite it) ------------
 
-/** The fork, at the ants' feet: three cells of wall, straight ahead of the nest. */
-const GAPS: readonly Cell[] = [
-  [WALL_X, 19],
-  [WALL_X, 20],
-  [WALL_X, 21],
+const V3_NEST: Cell = [18, 20];
+const V3_FOOD: Cell = [50, 20];
+const V3_WALL_X = 22;
+const V3_GAPS: readonly Cell[] = [
+  [V3_WALL_X, 19],
+  [V3_WALL_X, 20],
+  [V3_WALL_X, 21],
+];
+const V3_BLOCKS: readonly Rect[] = [
+  [27, 0, 32, 1],
+  [37, 4, 42, 5],
+  [30, 9, 36, 16],
+  [30, 24, 36, 31],
+  [44, 26, 49, 33],
 ];
 
-/**
- * Obstacle blocks, all in the right half and the top corridor. Two of them pinch
- * the top passage from opposite sides so the long road has to weave between
- * them; the rest give the open ground some texture. The straight run from the
- * gap to the food along y = 20 is kept clear — that is the short way, and it
- * should look like one.
- */
-const BLOCKS: readonly (readonly [number, number, number, number])[] = [
-  [27, 0, 32, 1], // hangs from the top edge
-  [37, 4, 42, 5], // and from the wall's shoulder, offset — the weave
-  [30, 9, 36, 16], // above the straight run
-  [30, 24, 36, 31], // below it
-  [44, 26, 49, 33], // lower right, texture
+// --- v4: open ground (Decision 22) ------------------------------------------
+//
+// Nest and food on the same row with 45 cells of open field between them, and
+// twenty blocks scattered over the whole field. Four sit in the band between
+// nest and food — two of them straddling row 20 — so the straight line is never
+// simply walkable and the road has to be found rather than followed.
+
+const V4_NEST: Cell = [6, 20];
+const V4_FOOD: Cell = [53, 20];
+const V4_BLOCKS: readonly Rect[] = [
+  // upper field
+  [11, 3, 13, 5],
+  [19, 2, 21, 4],
+  [28, 5, 31, 8],
+  [38, 3, 40, 5],
+  [46, 6, 48, 8],
+  [14, 9, 16, 11],
+  [24, 11, 26, 13],
+  [34, 10, 37, 12],
+  [44, 12, 45, 13],
+  // the band between nest and food — two of these straddle row 20
+  [16, 18, 18, 20],
+  [25, 21, 27, 23],
+  [33, 17, 35, 19],
+  [42, 20, 44, 22],
+  // lower field
+  [12, 27, 14, 29],
+  [21, 30, 24, 33],
+  [31, 26, 33, 28],
+  [40, 29, 42, 31],
+  [47, 33, 49, 35],
+  [8, 34, 10, 36],
+  [53, 26, 55, 28],
 ];
 
-/** Decision 17 (4): a 3x3 arrival block. Arrival is entering any of its cells. */
+/** A 3x3 arrival block. Arrival is entering any of its cells. */
 function zoneAround([cx, cy]: Cell): string[] {
   const cells: string[] = [];
   for (let y = cy - 1; y <= cy + 1; y += 1) {
@@ -67,16 +99,37 @@ function zoneAround([cx, cy]: Cell): string[] {
   return cells;
 }
 
-function blockedCells(): string[] {
+/** The zone plus two clear cells around it, so nothing is walled in at birth. */
+function clearance([cx, cy]: Cell): string[] {
+  const cells: string[] = [];
+  for (let y = cy - 3; y <= cy + 3; y += 1) {
+    for (let x = cx - 3; x <= cx + 3; x += 1) cells.push(id(x, y));
+  }
+  return cells;
+}
+
+function blockedCells(options: {
+  readonly wallX?: number;
+  readonly wallTop?: number;
+  readonly wallBottom?: number;
+  readonly blocks: readonly Rect[];
+  readonly nest: Cell;
+  readonly food: Cell;
+}): string[] {
   const cells = new Set<string>();
-  for (let y = WALL_TOP; y <= WALL_BOTTOM; y += 1) cells.add(id(WALL_X, y));
-  for (const [x0, y0, x1, y1] of BLOCKS) {
+  if (options.wallX !== undefined) {
+    for (let y = options.wallTop ?? 0; y <= (options.wallBottom ?? 0); y += 1) {
+      cells.add(id(options.wallX, y));
+    }
+  }
+  for (const [x0, y0, x1, y1] of options.blocks) {
     for (let y = y0; y <= y1; y += 1) {
       for (let x = x0; x <= x1; x += 1) cells.add(id(x, y));
     }
   }
-  // A zone is never wall, whatever a block overlaps.
-  for (const cell of [...zoneAround(NEST), ...zoneAround(FOOD)]) cells.delete(cell);
+  for (const cell of [...clearance(options.nest), ...clearance(options.food)]) {
+    cells.delete(cell);
+  }
   return [...cells].sort();
 }
 
@@ -97,7 +150,6 @@ function path(
   for (let head = 0; head < queue.length; head += 1) {
     const node = queue[head] as NodeId;
     if (target.has(node)) {
-      // Walk the parent chain back to whichever zone cell seeded this search.
       const out: NodeId[] = [node];
       for (let at = node; previous.get(at) !== at; ) {
         at = previous.get(at) as NodeId;
@@ -114,51 +166,75 @@ function path(
   return null;
 }
 
-export function buildSpec(): FieldSpec {
-  const draft: FieldSpec = {
-    name: "field",
-    width: WIDTH,
-    height: HEIGHT,
-    nest: NEST,
-    food: FOOD,
-    gaps: GAPS,
-    blocked: blockedCells(),
-    nestZone: zoneAround(NEST),
-    foodZone: zoneAround(FOOD),
-    branches: { short: [], long: [] },
-    // Decision 19, PROVISIONAL — pending Stage D and the derive turn. These are
-    // the Stage-C cell that formed the best road on this field (τ_road 8.3 k at
-    // ρ = 0.01, reading 1.07× against BFS 58). h, k and floor are the bridge's
-    // and untouched; the four below are what a flat deposit could not do in 2-D.
-    params: {
-      h: 2,
-      k: 20,
-      floor: 0,
-      gradedOver: 80,
-      whisker: 3,
-      straightBias: 4,
-      depositPerStep: 20,
-    },
-  };
-
+function finish(draft: FieldSpec): FieldSpec {
   const fixture = buildField(draft);
-  const closed = induce(fixture, { openShortcut: false });
-  const open = induce(fixture, { openShortcut: true });
-  const long = path(closed, draft.nestZone, draft.foodZone);
-  const short = path(open, draft.nestZone, draft.foodZone);
+  const long = path(
+    induce(fixture, { openShortcut: false }),
+    draft.nestZone,
+    draft.foodZone,
+  );
+  const short = path(
+    induce(fixture, { openShortcut: true }),
+    draft.nestZone,
+    draft.foodZone,
+  );
   if (!long || !short) {
-    throw new Error(
-      "the field is not connected both ways — the wall seals it, or a block does",
-    );
+    throw new Error(`${draft.name}: nest and food are not connected`);
   }
   return { ...draft, branches: { short, long } };
 }
 
-export function fieldSource(): string {
-  const spec = buildSpec();
+export function v3Spec(): FieldSpec {
+  return finish({
+    name: "field",
+    width: WIDTH,
+    height: HEIGHT,
+    nest: V3_NEST,
+    food: V3_FOOD,
+    gaps: V3_GAPS,
+    blocked: blockedCells({
+      wallX: V3_WALL_X,
+      wallTop: 6,
+      wallBottom: HEIGHT - 1,
+      blocks: V3_BLOCKS,
+      nest: V3_NEST,
+      food: V3_FOOD,
+    }),
+    nestZone: zoneAround(V3_NEST),
+    foodZone: zoneAround(V3_FOOD),
+    branches: { short: [], long: [] },
+    params: PARAMS,
+  });
+}
+
+export function v4Spec(): FieldSpec {
+  return finish({
+    name: "field-v4",
+    width: WIDTH,
+    height: HEIGHT,
+    nest: V4_NEST,
+    food: V4_FOOD,
+    // No doorway: v4 has no wall to put one in. `toggleShortcut` is a no-op on
+    // this fixture, and the verb becomes drawing walls (Decision 22, turn B).
+    gaps: [],
+    blocked: blockedCells({
+      blocks: V4_BLOCKS,
+      nest: V4_NEST,
+      food: V4_FOOD,
+    }),
+    nestZone: zoneAround(V4_NEST),
+    foodZone: zoneAround(V4_FOOD),
+    branches: { short: [], long: [] },
+    params: PARAMS,
+  });
+}
+
+function source(spec: FieldSpec, prefix: string, note: string): string {
   const cells = (list: readonly string[]) =>
     list.map((cell) => `    "${cell}",`).join("\n");
   return `// GENERATED by scripts/build-field.ts — do not hand-edit.
+//
+// ${note}
 //
 // Run \`pnpm build:field\` to regenerate; spec/field.test.ts fails if this file
 // and that generator disagree. The geometry is designed, the rest is computed:
@@ -167,7 +243,7 @@ export function fieldSource(): string {
 import { buildField } from "./grid.ts";
 import type { FieldSpec } from "./grid.ts";
 
-export const FIELD_SPEC: FieldSpec = {
+export const ${prefix}_SPEC: FieldSpec = {
   name: ${JSON.stringify(spec.name)},
   width: ${spec.width},
   height: ${spec.height},
@@ -202,31 +278,58 @@ ${cells(spec.branches.long)}
   },
 };
 
-export const FIELD = buildField(FIELD_SPEC);
+export const ${prefix} = buildField(${prefix}_SPEC);
 `;
 }
 
-function main(): void {
-  const spec = buildSpec();
+export const v3Source = (): string =>
+  source(
+    v3Spec(),
+    "FIELD_V3",
+    "v3 — the wall-and-doorway field. FROZEN: every spike in docs/spikes/ was\n" +
+      "// measured on it, and a record whose fixture no longer exists is not a\n" +
+      "// record. The page does not use it; only those scripts do.",
+  );
+
+export const v4Source = (): string =>
+  source(
+    v4Spec(),
+    "FIELD_V4",
+    "v4 (Decision 22) — open ground: no wall, no doorway, twenty scattered blocks.",
+  );
+
+function report(spec: FieldSpec, label: string): void {
   const fixture = buildField(spec);
-  const closed = induce(fixture, { openShortcut: false });
-  const open = induce(fixture, { openShortcut: true });
-  const bfsLong = shortestPathBetween(closed, spec.nestZone, spec.foodZone) as number;
-  const bfsShort = shortestPathBetween(open, spec.nestZone, spec.foodZone) as number;
+  const bfs = shortestPathBetween(
+    induce(fixture, { openShortcut: false }),
+    spec.nestZone,
+    spec.foodZone,
+  );
+  const bfsOpen = shortestPathBetween(
+    induce(fixture, { openShortcut: true }),
+    spec.nestZone,
+    spec.foodZone,
+  );
+  console.log(`${label} — ${spec.width}x${spec.height}`);
+  console.log(
+    `  nodes / edges     ${fixture.nodes.length} / ${fixture.edges.length}`,
+  );
+  console.log(`  blocked cells     ${spec.blocked.length}`);
+  console.log(`  gap cells         ${spec.gaps.length}`);
+  console.log(
+    `  BFS zone to zone  ${bfs} moves` +
+      (spec.gaps.length > 0 ? `  (${bfsOpen} with the doorway open)` : ""),
+  );
+}
 
-  writeFileSync("src/fixtures/field.ts", fieldSource());
-
-  console.log(`field ${spec.width}x${spec.height}`);
-  console.log(`  nodes            ${fixture.nodes.length}`);
-  console.log(`  edges            ${fixture.edges.length}`);
-  console.log(`  blocked cells    ${spec.blocked.length}`);
-  console.log(`  gap cells        ${spec.gaps.length}`);
-  console.log(`  shortcut edges   ${fixture.edges.filter((e) => e.shortcut).length}`);
-  console.log(`  zones            nest ${spec.nestZone.length}, food ${spec.foodZone.length} cells`);
-  console.log(`  BFS long (gap shut)   ${bfsLong} moves  (zone to zone)`);
-  console.log(`  BFS short (gap open)  ${bfsShort} moves  (zone to zone)`);
-  console.log(`  ratio                 ${(bfsLong / bfsShort).toFixed(3)}`);
-  console.log(`written -> src/fixtures/field.ts`);
+function main(): void {
+  writeFileSync("src/fixtures/field-v3.ts", v3Source());
+  writeFileSync("src/fixtures/field-v4.ts", v4Source());
+  report(v3Spec(), "v3 (frozen)");
+  console.log("");
+  report(v4Spec(), "v4 (the page)");
+  console.log("");
+  console.log("written -> src/fixtures/field-v3.ts, src/fixtures/field-v4.ts");
 }
 
 if (process.argv[1]?.endsWith("build-field.ts")) main();

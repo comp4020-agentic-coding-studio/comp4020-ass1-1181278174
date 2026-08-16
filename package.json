@@ -21,6 +21,8 @@
     "spike:block": "node scripts/spike-block.ts",
     "spike:block-fine": "node scripts/spike-block-fine.ts",
     "spike:raise": "node scripts/spike-raise.ts",
+    "spike:v4-block": "node scripts/spike-v4-block.ts",
+    "spike:v4-epsilon": "node scripts/spike-v4-epsilon.ts",
     "shot": "node scripts/shot.ts"
   },
   "devDependencies": {

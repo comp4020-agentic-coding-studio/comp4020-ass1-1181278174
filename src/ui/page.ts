@@ -100,7 +100,6 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   const stripCanvas = el<HTMLCanvasElement>("strip");
   const readout = el("readout");
   const note = el("readout-note");
-  const wallButton = el<HTMLButtonElement>("wall");
   const rhoInput = el<HTMLInputElement>("rho");
   const rhoValue = el("rho-value");
   const share = el("share");
@@ -130,8 +129,8 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     ) as number;
   const BFS_LONG = bfsFor(false);
   const BFS_SHORT = bfsFor(true);
-  /** A trip shorter than the midpoint of the two routes came through the doorway. */
-  const VIA_GAP = (BFS_LONG + BFS_SHORT) / 2;
+  /** Walls the visitor has drawn. Turn B gives them a way to change it. */
+  let wallsDrawn = 0;
 
   const bfsNow = (): number => (colony.shortcutOpen ? BFS_SHORT : BFS_LONG);
 
@@ -159,16 +158,10 @@ export function createPage(doc: Document, deps: PageDeps): Page {
         ? `mean trip ÷ shortest possible (${bfsNow()} moves)`
         : `warming up — ${colony.tripsCompleted} of ${READING_WINDOW.minTrips} trips`;
 
-    // Secondary readout, never thresholded (Decision 19). It moves before the
-    // reading does, so it is the earliest visible sign of a switch.
-    const recent = engine.completedTripLengths(colony);
-    share.textContent = !colony.shortcutOpen
-      ? "the gap is shut"
-      : recent.length === 0
-        ? "—"
-        : `${Math.round(
-            (recent.filter((length) => length < VIA_GAP).length / recent.length) * 100,
-          )}% of trips through the gap`;
+    // Secondary readout, never thresholded. On open ground the thing worth
+    // counting is what the VISITOR has added, not which of two routes was taken
+    // — there is only one kind of route now. Turn B makes this number move.
+    share.textContent = `walls drawn: ${wallsDrawn}`;
 
     // Throttled: the region is polite, but a number that changes 60 times a
     // second is not information, it is noise with a screen reader attached.
@@ -188,13 +181,14 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     runButton.setAttribute("aria-pressed", String(!running));
   }
 
+  /**
+   * v4 has no doorway, so this is a no-op on the shipped fixture — it stays
+   * because `?open` still drives the older fields in the spike scripts, and
+   * because turn B replaces it with the real verb, drawing walls.
+   */
   function toggleShortcut(): void {
     engine.toggleShortcut(colony);
     openedAtSample = colony.shortcutOpen ? series.length : null;
-    wallButton.textContent = colony.shortcutOpen
-      ? "Close the gap in the wall"
-      : "Open the gap in the wall";
-    wallButton.setAttribute("aria-pressed", String(colony.shortcutOpen));
     render();
   }
 
@@ -214,8 +208,7 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     colony = engine.createColony(fixture, { rho, seed: 1, ants: ANTS });
     series = [];
     openedAtSample = null;
-    wallButton.textContent = "Open the gap in the wall";
-    wallButton.setAttribute("aria-pressed", "false");
+    wallsDrawn = 0;
     render();
   }
 
@@ -231,13 +224,6 @@ export function createPage(doc: Document, deps: PageDeps): Page {
 
   // --- controls -------------------------------------------------------------
 
-  const onWallClick = (): void => toggleShortcut();
-  const onStagePointer = (event: PointerEvent): void => {
-    if (!canvas.hitsGap(event.clientX, event.clientY)) return;
-    stage.setPointerCapture?.(event.pointerId);
-    event.preventDefault();
-    toggleShortcut();
-  };
   const onRhoInput = (): void => setRho(Number(rhoInput.value));
   const onRunClick = (): void => setRunning(!loop.running);
   const onResetClick = (): void => reset();
@@ -248,8 +234,6 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     growButton.hidden = true;
   };
 
-  wallButton.addEventListener("click", onWallClick);
-  stage.addEventListener("pointerdown", onStagePointer as EventListener);
   rhoInput.addEventListener("input", onRhoInput);
   runButton.addEventListener("click", onRunClick);
   resetButton.addEventListener("click", onResetClick);
@@ -279,8 +263,6 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     destroy() {
       loop.stop();
       canvas.dispose();
-      wallButton.removeEventListener("click", onWallClick);
-      stage.removeEventListener("pointerdown", onStagePointer as EventListener);
       rhoInput.removeEventListener("input", onRhoInput);
       runButton.removeEventListener("click", onRunClick);
       resetButton.removeEventListener("click", onResetClick);

@@ -13,7 +13,7 @@
 // half-lives that matter are ~140 steps (ρ = 0.005) and ~35 (ρ = 0.02).
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { FIELD_SPEC } from "../src/fixtures/field.ts";
+import { FIELD_V3_SPEC } from "../src/fixtures/field-v3.ts";
 import { buildField } from "../src/fixtures/grid.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
 import { induce } from "../src/fixtures/graph.ts";
@@ -34,16 +34,16 @@ const RHOS_B = [0, 0.002, 0.005, 0.01, 0.02, 0.05];
 /** Provisional, and provisional means provisional: the grid is not extended to chase them. */
 const PASS = { firstFood: 500, trips: 300, reading: 1.6 };
 
-const BASE = buildField(FIELD_SPEC);
+const BASE = buildField(FIELD_V3_SPEC);
 const BFS_LONG = shortestPathBetween(
   induce(BASE, { openShortcut: false }),
-  FIELD_SPEC.nestZone,
-  FIELD_SPEC.foodZone,
+  FIELD_V3_SPEC.nestZone,
+  FIELD_V3_SPEC.foodZone,
 ) as number;
 const BFS_SHORT = shortestPathBetween(
   induce(BASE, { openShortcut: true }),
-  FIELD_SPEC.nestZone,
-  FIELD_SPEC.foodZone,
+  FIELD_V3_SPEC.nestZone,
+  FIELD_V3_SPEC.foodZone,
 ) as number;
 
 interface Variant {
@@ -58,9 +58,9 @@ const label = (v: Variant) =>
 
 function fixtureFor(v: Variant): Fixture {
   return buildField({
-    ...FIELD_SPEC,
+    ...FIELD_V3_SPEC,
     params: {
-      ...FIELD_SPEC.params,
+      ...FIELD_V3_SPEC.params,
       gradedOver: v.T,
       whisker: v.W,
       straightBias: v.w,
@@ -122,14 +122,14 @@ function map(colony: engine.Colony, fixture: Fixture): string {
     }
   });
   const peak = Math.max(...heat.values(), 1);
-  const blocked = new Set(FIELD_SPEC.blocked);
-  const nest = new Set(FIELD_SPEC.nestZone);
-  const food = new Set(FIELD_SPEC.foodZone);
-  const gaps = new Set(FIELD_SPEC.gaps.map(([x, y]) => `${x},${y}`));
+  const blocked = new Set(FIELD_V3_SPEC.blocked);
+  const nest = new Set(FIELD_V3_SPEC.nestZone);
+  const food = new Set(FIELD_V3_SPEC.foodZone);
+  const gaps = new Set(FIELD_V3_SPEC.gaps.map(([x, y]) => `${x},${y}`));
   const rows: string[] = [];
-  for (let y = 0; y < FIELD_SPEC.height; y += 2) {
+  for (let y = 0; y < FIELD_V3_SPEC.height; y += 2) {
     let row = "";
-    for (let x = 0; x < FIELD_SPEC.width; x += 1) {
+    for (let x = 0; x < FIELD_V3_SPEC.width; x += 1) {
       const node = `${x},${y}`;
       if (nest.has(node)) row += "N";
       else if (food.has(node)) row += "F";
@@ -298,7 +298,7 @@ function honesty(say: (line?: string) => void, best: readonly Scored[]): void {
     const fixture = fixtureFor(candidate.variant);
     const moved: Fixture = {
       ...fixture,
-      foodZone: FIELD_SPEC.foodZone.map((cell) => {
+      foodZone: FIELD_V3_SPEC.foodZone.map((cell) => {
         const [x, y] = cell.split(",");
         return `${x},${Number(y) + 19}`;
       }),
@@ -333,12 +333,12 @@ function main(): void {
   );
   say();
   say(
-    `Field ${FIELD_SPEC.width}×${FIELD_SPEC.height}, ${BASE.nodes.length} nodes, ` +
+    `Field ${FIELD_V3_SPEC.width}×${FIELD_V3_SPEC.height}, ${BASE.nodes.length} nodes, ` +
       `${BASE.edges.length} edges. BFS **${BFS_LONG}** round the wall, **${BFS_SHORT}** ` +
       `through the gap (zone to zone) — ratio ${(BFS_LONG / BFS_SHORT).toFixed(3)}.`,
   );
   say(
-    `h = ${FIELD_SPEC.params.h}, k = ${FIELD_SPEC.params.k}, floor = ${FIELD_SPEC.params.floor}, ` +
+    `h = ${FIELD_V3_SPEC.params.h}, k = ${FIELD_V3_SPEC.params.k}, floor = ${FIELD_V3_SPEC.params.floor}, ` +
       `untouched. Window ${WINDOW} trips, minimum ${MIN_TRIPS}.`,
   );
   say();

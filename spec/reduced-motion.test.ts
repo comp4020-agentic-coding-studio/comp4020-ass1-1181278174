@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { FIELD } from "../src/fixtures/field.ts";
+import { FIELD_V4 } from "../src/fixtures/field-v4.ts";
 import { prefersReducedMotion } from "../src/ui/motion.ts";
 import { createPage } from "../src/ui/page.ts";
 
@@ -29,7 +29,7 @@ function mount(reducedMotion: boolean) {
   let clock = 0;
   const queue: (() => void)[] = [];
   const page = createPage(doc, {
-    fixture: FIELD,
+    fixture: FIELD_V4,
     reducedMotion,
     now: () => clock,
     schedule: (callback) => queue.push(callback),
@@ -154,13 +154,14 @@ describe("the three controls, and no more", () => {
     const controls = [...page.doc.querySelectorAll("button, input")].map(
       (node) => node.id,
     );
-    // wall = the one verb; rho = the forgetting rate; run/reset = run control.
-    // grow is the run control under a preference, not a fourth.
-    expect(controls.sort()).toEqual(["grow", "reset", "rho", "run", "wall"]);
+    // rho = the forgetting rate; run/reset = the run control; grow is that same
+    // control under a preference, not another one. The verb (drawing walls)
+    // lives on the canvas and arrives in turn B, so there is no button for it.
+    expect(controls.sort()).toEqual(["grow", "reset", "rho", "run"]);
     page.page.destroy();
   });
 
-  it("gives the slider the FIELD's range, and speaks the number not a regime", () => {
+  it("gives the slider the FIELD_V4's range, and speaks the number not a regime", () => {
     // Decision 19: regime labels are off on the field until the thresholds are
     // derived — no label rather than a wrong one. The control is still never
     // silent, because aria-valuetext says the number.
@@ -179,14 +180,11 @@ describe("the three controls, and no more", () => {
     page.page.destroy();
   });
 
-  it("marks the one verb pressed once the shortcut is open", () => {
+  it("counts the walls the visitor has drawn, which is none of them yet", () => {
+    // v4 is open ground: no doorway to toggle, and the drawing verb lands in
+    // turn B. The readout exists now so the layout does not jump when it does.
     const page = mount(false);
-    const wall = page.button("wall");
-    expect(wall.getAttribute("aria-pressed")).toBe("false");
-    page.click("wall");
-    expect(wall.getAttribute("aria-pressed")).toBe("true");
-    expect(wall.textContent?.trim()).toBe("Close the gap in the wall");
-    expect(page.page.colony().shortcutOpen).toBe(true);
+    expect(page.doc.getElementById("share")?.textContent).toBe("walls drawn: 0");
     page.page.destroy();
   });
 });

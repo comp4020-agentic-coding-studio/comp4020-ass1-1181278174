@@ -15,6 +15,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
+import { FIELD_V4, FIELD_V4_SPEC } from "../src/fixtures/field-v4.ts";
 import { engine } from "./engine-api.ts";
 
 const SIM_DIR = resolve("src/sim");
@@ -63,6 +64,52 @@ describe("η is blind to where the food is", () => {
     for (const weight of weights) {
       expect(weight).toBeCloseTo(weights[0] as number, 12);
     }
+  });
+});
+
+describe("η is blind to where the food is — on the field the page runs", () => {
+  // Decision 22 makes this the FIRST sentence of the h1: "No ant knows the map."
+  // The bridge's version above proves it on twelve nodes; this proves it on the
+  // 2208 the visitor actually watches, where the engine also has a whisker and a
+  // momentum weight, and either could have been a way to smuggle the goal in.
+  it("gives the same choice distribution when the food block moves", () => {
+    const moved: Fixture = {
+      ...FIELD_V4,
+      // Straight down the field, well clear of the nest — a relocation any
+      // distance-reading term would have to notice.
+      foodZone: (FIELD_V4.foodZone ?? []).map((cell) => {
+        const [x, y] = cell.split(",");
+        return `${x},${Number(y) + 12}`;
+      }),
+    };
+    const distributionAt = (fixture: Fixture) => {
+      const colony = engine.createColony(fixture, { rho: 0, seed: 1, ants: 400 });
+      return engine.choiceDistribution(colony, fixture.nest);
+    };
+    const before = distributionAt(FIELD_V4);
+    const after = distributionAt(moved);
+
+    expect([...before.keys()].sort()).toEqual([...after.keys()].sort());
+    for (const [node, probability] of before) {
+      expect(
+        Math.abs((after.get(node) ?? 0) - probability),
+        `moving the food changed the chance of stepping to ${node}: some term is ` +
+          `reading the goal, and "no ant knows the map" is false`,
+      ).toBeLessThan(1e-12);
+    }
+  });
+
+  it("splits the nest's four ways evenly before any scent exists", () => {
+    // Open ground, zero pheromone: nothing distinguishes the direction of the
+    // food from the direction of empty field, so nothing may.
+    const colony = engine.createColony(FIELD_V4, { rho: 0, seed: 1, ants: 400 });
+    const split = engine.choiceDistribution(colony, FIELD_V4.nest);
+    expect(split.size).toBe(4);
+    for (const [, probability] of split) {
+      expect(Math.abs(probability - 0.25)).toBeLessThan(1e-12);
+    }
+    // And the food really is off to one side, so the test is not vacuous.
+    expect(FIELD_V4_SPEC.food[0]).toBeGreaterThan(FIELD_V4_SPEC.nest[0] + 40);
   });
 });
 

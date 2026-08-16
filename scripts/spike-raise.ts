@@ -21,7 +21,7 @@
 // ≤ 1.6×.
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { FIELD_SPEC } from "../src/fixtures/field.ts";
+import { FIELD_V3_SPEC } from "../src/fixtures/field-v3.ts";
 import { buildField } from "../src/fixtures/grid.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
 import { induce } from "../src/fixtures/graph.ts";
@@ -45,10 +45,10 @@ const BAR: (readonly [number, number])[] = [];
 for (let x = 10; x <= 21; x += 1) BAR.push([x, 12] as const);
 
 const SPEC = {
-  ...FIELD_SPEC,
+  ...FIELD_V3_SPEC,
   gaps: BAR,
   params: {
-    ...FIELD_SPEC.params,
+    ...FIELD_V3_SPEC.params,
     gradedOver: 80,
     whisker: 3,
     straightBias: 4,

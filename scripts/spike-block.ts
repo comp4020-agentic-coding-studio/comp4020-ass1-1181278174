@@ -10,7 +10,7 @@
 // toggled SHUT at settle = the road is blocked. The doorway stays sealed for good.
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { FIELD_SPEC } from "../src/fixtures/field.ts";
+import { FIELD_V3_SPEC } from "../src/fixtures/field-v3.ts";
 import { buildField } from "../src/fixtures/grid.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
 import { induce } from "../src/fixtures/graph.ts";
@@ -32,7 +32,7 @@ const HEALED_AT = 1.6;
 const BAR: (readonly [number, number])[] = [];
 for (let x = 10; x <= 21; x += 1) BAR.push([x, 12] as const);
 
-const SPEC = { ...FIELD_SPEC, gaps: BAR, params: { ...FIELD_SPEC.params, gradedOver: 80, whisker: 3, straightBias: 4, depositPerStep: 20 } };
+const SPEC = { ...FIELD_V3_SPEC, gaps: BAR, params: { ...FIELD_V3_SPEC.params, gradedOver: 80, whisker: 3, straightBias: 4, depositPerStep: 20 } };
 const FIXTURE: Fixture = buildField(SPEC);
 const BFS_OPEN = shortestPathBetween(induce(FIXTURE, { openShortcut: true }), SPEC.nestZone, SPEC.foodZone) as number; // bar open = normal
 const BFS_BLOCKED = shortestPathBetween(induce(FIXTURE, { openShortcut: false }), SPEC.nestZone, SPEC.foodZone) as number; // bar shut

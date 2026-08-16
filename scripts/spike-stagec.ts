@@ -18,7 +18,7 @@
 // hypothesis; the rest is whether it bought the band.
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { FIELD_SPEC } from "../src/fixtures/field.ts";
+import { FIELD_V3_SPEC } from "../src/fixtures/field-v3.ts";
 import { buildField } from "../src/fixtures/grid.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
 import { induce } from "../src/fixtures/graph.ts";
@@ -44,26 +44,26 @@ const RHOS = [0, 0.002, 0.005, 0.01, 0.02, 0.04, 0.08];
 /** "Falls below" is measured at 1.6x, per Decision 18's definition of found. */
 const CROSS_AT = 1.6;
 
-const BASE = buildField(FIELD_SPEC);
-const K = FIELD_SPEC.params.k;
+const BASE = buildField(FIELD_V3_SPEC);
+const K = FIELD_V3_SPEC.params.k;
 const BFS_LONG = shortestPathBetween(
   induce(BASE, { openShortcut: false }),
-  FIELD_SPEC.nestZone,
-  FIELD_SPEC.foodZone,
+  FIELD_V3_SPEC.nestZone,
+  FIELD_V3_SPEC.foodZone,
 ) as number;
 const BFS_SHORT = shortestPathBetween(
   induce(BASE, { openShortcut: true }),
-  FIELD_SPEC.nestZone,
-  FIELD_SPEC.foodZone,
+  FIELD_V3_SPEC.nestZone,
+  FIELD_V3_SPEC.foodZone,
 ) as number;
 /** A trip shorter than the midpoint came through the doorway, not over the top. */
 const VIA_GAP = (BFS_LONG + BFS_SHORT) / 2;
 
 function fixtureFor(D: number, T = T_BASE): Fixture {
   return buildField({
-    ...FIELD_SPEC,
+    ...FIELD_V3_SPEC,
     params: {
-      ...FIELD_SPEC.params,
+      ...FIELD_V3_SPEC.params,
       gradedOver: T,
       whisker: WHISKER,
       straightBias: STRAIGHT,
@@ -176,14 +176,14 @@ function map(colony: engine.Colony, fixture: Fixture): string {
     }
   });
   const peak = Math.max(...heat.values(), 1);
-  const blocked = new Set(FIELD_SPEC.blocked);
-  const nest = new Set(FIELD_SPEC.nestZone);
-  const food = new Set(FIELD_SPEC.foodZone);
-  const gaps = new Set(FIELD_SPEC.gaps.map(([x, y]) => `${x},${y}`));
+  const blocked = new Set(FIELD_V3_SPEC.blocked);
+  const nest = new Set(FIELD_V3_SPEC.nestZone);
+  const food = new Set(FIELD_V3_SPEC.foodZone);
+  const gaps = new Set(FIELD_V3_SPEC.gaps.map(([x, y]) => `${x},${y}`));
   const rows: string[] = [];
-  for (let y = 0; y < FIELD_SPEC.height; y += 2) {
+  for (let y = 0; y < FIELD_V3_SPEC.height; y += 2) {
     let row = "";
-    for (let x = 0; x < FIELD_SPEC.width; x += 1) {
+    for (let x = 0; x < FIELD_V3_SPEC.width; x += 1) {
       const node = `${x},${y}`;
       if (nest.has(node)) row += "N";
       else if (food.has(node)) row += "F";
@@ -235,7 +235,7 @@ function main(): void {
   say(`## The field, v2`);
   say();
   say(
-    `${FIELD_SPEC.width}×${FIELD_SPEC.height}, ${BASE.nodes.length} nodes, ${BASE.edges.length} edges. ` +
+    `${FIELD_V3_SPEC.width}×${FIELD_V3_SPEC.height}, ${BASE.nodes.length} nodes, ${BASE.edges.length} edges. ` +
       `The wall reaches the bottom edge, so the passage along the top is the only long way — ` +
       `no perimeter corridor. The doorway is three cells wide, four cells straight ahead of the nest.`,
   );

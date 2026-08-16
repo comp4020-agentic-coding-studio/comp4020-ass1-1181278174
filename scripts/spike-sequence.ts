@@ -7,7 +7,7 @@
 // D=20 T=80 W=3 w=4 ε=0 — the engine as pushed (f5a8fc8), no fifth knob.
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { FIELD_SPEC } from "../src/fixtures/field.ts";
+import { FIELD_V3_SPEC } from "../src/fixtures/field-v3.ts";
 import { buildField } from "../src/fixtures/grid.ts";
 import type { Fixture } from "../src/fixtures/double-bridge.ts";
 import { induce } from "../src/fixtures/graph.ts";
@@ -22,11 +22,11 @@ const SEEDS = [1, 2, 3];
 const SAMPLE = 250;
 
 const FIXTURE: Fixture = buildField({
-  ...FIELD_SPEC,
-  params: { ...FIELD_SPEC.params, gradedOver: 80, whisker: 3, straightBias: 4, depositPerStep: 20 },
+  ...FIELD_V3_SPEC,
+  params: { ...FIELD_V3_SPEC.params, gradedOver: 80, whisker: 3, straightBias: 4, depositPerStep: 20 },
 });
-const BFS_LONG = shortestPathBetween(induce(FIXTURE, { openShortcut: false }), FIELD_SPEC.nestZone, FIELD_SPEC.foodZone) as number;
-const BFS_SHORT = shortestPathBetween(induce(FIXTURE, { openShortcut: true }), FIELD_SPEC.nestZone, FIELD_SPEC.foodZone) as number;
+const BFS_LONG = shortestPathBetween(induce(FIXTURE, { openShortcut: false }), FIELD_V3_SPEC.nestZone, FIELD_V3_SPEC.foodZone) as number;
+const BFS_SHORT = shortestPathBetween(induce(FIXTURE, { openShortcut: true }), FIELD_V3_SPEC.nestZone, FIELD_V3_SPEC.foodZone) as number;
 const VIA = (BFS_LONG + BFS_SHORT) / 2;
 
 const median = (values: readonly number[]): number => {
