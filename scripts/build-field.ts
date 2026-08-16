@@ -57,10 +57,14 @@ const V3_BLOCKS: readonly Rect[] = [
 
 // --- v4: open ground (Decision 22) ------------------------------------------
 //
-// Nest and food on the same row with 45 cells of open field between them, and
-// twenty blocks scattered over the whole field. Four sit in the band between
-// nest and food — two of them straddling row 20 — so the straight line is never
-// simply walkable and the road has to be found rather than followed.
+// Nest and food on the same row with 47 cells of open field between them, and
+// twenty blocks scattered over the whole field.
+//
+// v4.1: the band between them — y 18 to 22, the nest's right edge to the food's
+// left — is kept CLEAR. In v4 two blocks straddled row 20 and the colony's road
+// looped the long way round the whole field; the reading sat at 1.96×. Blocks
+// beside the corridor give the road something to shape itself around; blocks
+// across it give the road a reason to go somewhere else entirely.
 
 const V4_NEST: Cell = [6, 20];
 const V4_FOOD: Cell = [53, 20];
@@ -75,11 +79,14 @@ const V4_BLOCKS: readonly Rect[] = [
   [24, 11, 26, 13],
   [34, 10, 37, 12],
   [44, 12, 45, 13],
-  // the band between nest and food — two of these straddle row 20
-  [16, 18, 18, 20],
-  [25, 21, 27, 23],
-  [33, 17, 35, 19],
-  [42, 20, 44, 22],
+  // v4.1: the band between nest and food (y 18-22, from the nest's right to the
+  // food's left) is CLEAR. These four moved to sit immediately outside it, so
+  // they still shape the road without standing in the doorway of it — the road
+  // has something to find its way around, not something to be blocked by.
+  [16, 13, 18, 16],
+  [25, 23, 27, 26],
+  [33, 14, 35, 17],
+  [42, 23, 44, 26],
   // lower field
   [12, 27, 14, 29],
   [21, 30, 24, 33],

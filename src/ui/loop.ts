@@ -31,6 +31,12 @@ export interface Loop {
   start(): void;
   stop(): void;
   readonly running: boolean;
+  /**
+   * Change the pace. Only the pace: the engine is fixed-step, so a given step
+   * count produces the same colony at 75 as at 300 — what changes is how much
+   * wall-clock time passes while those steps happen.
+   */
+  setStepsPerSecond(rate: number): void;
   /** Advance by hand — the reduced-motion "step" path, and the test's lever. */
   tick(): void;
 }
@@ -43,7 +49,7 @@ export interface Loop {
 const MAX_STEPS_PER_FRAME = 240;
 
 export function createLoop(options: LoopOptions): Loop {
-  const stepMs = 1000 / options.stepsPerSecond;
+  let stepMs = 1000 / options.stepsPerSecond;
   const renderMs =
     options.rendersPerSecond === undefined
       ? 0
@@ -93,6 +99,12 @@ export function createLoop(options: LoopOptions): Loop {
     },
     get running() {
       return handle !== null;
+    },
+    setStepsPerSecond(rate) {
+      // The accumulator is carried over rather than cleared: it holds a fraction
+      // of a step that has been paid for in wall time, and dropping it would
+      // lose simulation the visitor already waited through.
+      stepMs = 1000 / rate;
     },
     tick,
   };

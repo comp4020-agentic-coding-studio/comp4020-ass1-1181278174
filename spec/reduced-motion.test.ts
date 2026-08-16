@@ -18,7 +18,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import { FIELD_V4 } from "../src/fixtures/field-v4.ts";
 import { prefersReducedMotion } from "../src/ui/motion.ts";
-import { createPage } from "../src/ui/page.ts";
+import { STEPS_PER_SECOND, createPage } from "../src/ui/page.ts";
 
 /** The built page, so this tests what ships rather than what the source says. */
 function mount(reducedMotion: boolean) {
@@ -84,11 +84,12 @@ describe("prefers-reduced-motion: reduce", () => {
     const page = start(true);
     page.click("grow");
     page.frames(50, 20);
-    // One second of frames at the page's 300 steps/s (Decision 20). 1000/300 does
-    // not divide evenly, so the exact-arithmetic assertions live in
-    // spec/loop.test.ts and this one allows the step of slack division leaves.
-    expect(page.steps()).toBeGreaterThanOrEqual(299);
-    expect(page.steps()).toBeLessThanOrEqual(300);
+    // One second of frames at whatever the page's rate IS — read from the page,
+    // not copied, so changing the pacing cannot leave this test asserting the old
+    // number. The rate rarely divides 1000 evenly, hence the step of slack; the
+    // exact-arithmetic assertions live in spec/loop.test.ts.
+    expect(page.steps()).toBeGreaterThanOrEqual(STEPS_PER_SECOND - 1);
+    expect(page.steps()).toBeLessThanOrEqual(STEPS_PER_SECOND);
     page.page.destroy();
   });
 
@@ -115,8 +116,8 @@ describe("without the preference", () => {
     const page = mount(false);
     expect(page.page.loop.running).toBe(true);
     page.frames(50, 20);
-    expect(page.steps()).toBeGreaterThanOrEqual(299);
-    expect(page.steps()).toBeLessThanOrEqual(300);
+    expect(page.steps()).toBeGreaterThanOrEqual(STEPS_PER_SECOND - 1);
+    expect(page.steps()).toBeLessThanOrEqual(STEPS_PER_SECOND);
     page.page.destroy();
   });
 
@@ -149,15 +150,25 @@ describe("the page asks the right question", () => {
 });
 
 describe("the three controls, and no more", () => {
-  it("ships exactly the controls PLAN.md caps at three", () => {
+  it("ships exactly the four controls PLAN.md caps at", () => {
     const page = mount(false);
     const controls = [...page.doc.querySelectorAll("button, input")].map(
       (node) => node.id,
     );
-    // rho = the forgetting rate; run/reset = the run control; grow is that same
-    // control under a preference, not another one. The verb (drawing walls)
-    // lives on the canvas and arrives in turn B, so there is no button for it.
-    expect(controls.sort()).toEqual(["grow", "reset", "rho", "run"]);
+    // Four controls (Decision 25): the verb (drawing walls, on the canvas, no
+    // button at all), the forgetting rate, the speed, and run/pause/reset. `grow`
+    // is the run control under a preference and `clear` is an undo for the verb,
+    // so neither is a fifth.
+    expect(controls.sort()).toEqual([
+      "clear",
+      "grow",
+      "reset",
+      "rho",
+      "run",
+      "speed-150",
+      "speed-300",
+      "speed-75",
+    ]);
     page.page.destroy();
   });
 
@@ -170,8 +181,8 @@ describe("the three controls, and no more", () => {
     expect(rho.min).toBe("0");
     expect(rho.max).toBe("0.05");
     expect(rho.step).toBe("0.001");
-    expect(rho.value).toBe("0.01");
-    expect(rho.getAttribute("aria-valuetext")).toBe("0.010");
+    expect(rho.value).toBe("0.02");
+    expect(rho.getAttribute("aria-valuetext")).toBe("0.020");
 
     page.page.setRho(0);
     expect(rho.getAttribute("aria-valuetext")).toBe("0.000");
@@ -180,11 +191,13 @@ describe("the three controls, and no more", () => {
     page.page.destroy();
   });
 
-  it("counts the walls the visitor has drawn, which is none of them yet", () => {
-    // v4 is open ground: no doorway to toggle, and the drawing verb lands in
-    // turn B. The readout exists now so the layout does not jump when it does.
+  it("counts the walls the visitor has drawn, and hides Clear until there are some", () => {
     const page = mount(false);
     expect(page.doc.getElementById("share")?.textContent).toBe("walls drawn: 0");
+    expect(page.button("clear").hidden).toBe(true);
+    page.page.toggleCell("30,20");
+    expect(page.doc.getElementById("share")?.textContent).toBe("walls drawn: 1");
+    expect(page.button("clear").hidden).toBe(false);
     page.page.destroy();
   });
 });

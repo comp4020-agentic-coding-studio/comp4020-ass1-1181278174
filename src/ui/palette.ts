@@ -22,6 +22,8 @@ export interface Palette {
   readonly gapRing: string;
   /** An ant. Four hundred of them, and they must read at 390px wide. */
   readonly ant: string;
+  /** An ant carrying food home — its one bit, made visible. */
+  readonly carrier: string;
   /** The nest disc and the food disc. */
   readonly nest: string;
   readonly food: string;
@@ -44,10 +46,11 @@ export const LIGHT: Palette = {
   blocked: "#9aa0a8",
   gapRing: "#c2410c",
   ant: "#0b0b0c",
+  carrier: "#d92d20",
   nest: "#1d4ed8",
   food: "#15803d",
-  foodScent: "234, 130, 20",
-  homeScent: "56, 189, 208",
+  foodScent: "236, 140, 18",
+  homeScent: "38, 176, 200",
   ink: "#1a1c1f",
   muted: "#5b6068",
   baseline: "#d7d3ca",

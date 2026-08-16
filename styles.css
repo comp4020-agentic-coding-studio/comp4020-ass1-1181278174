@@ -18,8 +18,9 @@
   --focus: #0f766e;    /* 4.9:1 on --page, and visible on white */
   --ring: #c2410c;
   --ant: #0b0b0c;
-  --to-food: #ea8214;
-  --to-home: #38bdd0;
+  --carrying: #d92d20;
+  --to-food: #ec8c12;
+  --to-home: #26b0c8;
 
   color-scheme: light;
 }
@@ -140,6 +141,10 @@ main {
   background: var(--ant);
 }
 
+.dot.carrying {
+  background: var(--carrying);
+}
+
 .dot.to-food {
   background: var(--to-food);
 }
@@ -208,6 +213,30 @@ button[aria-pressed="true"] {
 #rho {
   width: 100%;
   margin: 6px 0 2px;
+  accent-color: var(--focus);
+}
+
+.speed {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.speed legend {
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.speed label {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-right: 14px;
+  font-size: 0.875rem;
+}
+
+.speed input {
   accent-color: var(--focus);
 }
 

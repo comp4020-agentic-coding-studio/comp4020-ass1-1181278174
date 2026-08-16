@@ -1067,11 +1067,120 @@ ants more than one cell from the BFS shortest route and reported **94–96% at e
 route. It now counts ants on ground whose scent is under a tenth of the busiest
 cell's, which is what the eye calls wandering.
 
+### Decision 24 — the look, and 150 steps/s
+
+**Provenance.** The drawing below was written by the director's advisor at the
+director's instruction, against `e12a557`, verified there at 185/185 with six
+screenshots, and **never landed**. This round ports it onto field v4 by hand —
+the patch's own field geometry is void, and applying it wholesale would have
+conflicted. The design is the advisor's; the porting and everything below the
+line is the agent's.
+
+The director's original ruling to the advisor, verbatim, is preserved in
+`/mnt/c/Agent workspace/ASS1/advisor/14-look/decision-21-look.patch`. What was
+built from it:
+
+- **Ants.** A per-ant hashed offset inside the cell — not the five-value lattice
+  the old jitter produced, which drew four hundred ants on twenty-five spots —
+  and drawn positions that ease halfway toward the true cell each frame, so
+  motion reads as a flow rather than a hop. A jump of more than four cells is a
+  reset, not a step, and is not eased. This is display state in `canvas.ts`,
+  derived from the colony every frame and **never read back into it**; the
+  resize-digest test still holds. Black while searching, **red while carrying** —
+  the one bit each ant holds, made visible. Dot size stays the agent's fixed
+  pixel value from the previous round (≈5 px at 1920, ≈3.6 px at 390).
+- **Scent.** Per-cell squares at 0.62 of a cell, centred — marks on the ground
+  rather than fog over it — and only for cells that carry enough to show. The
+  mapping is **absolute**, in units of the fixture's own per-step deposit `D`:
+  food-scent from 2.5 D to a full road at 120 D, home-scent from 1.5 D to 250 D
+  and fainter, log-scaled with the ceiling taken as whichever is higher, the
+  fixed mark or the current peak. The advisor's note on why a fraction-of-peak
+  floor was tried first and rejected is worth keeping: early on the peak is low,
+  so every cell an ant had crossed once passed the fraction and the field was a
+  checkerboard; at steady state the same fraction hid the far end of the road.
+- **Nest and food** are discs the size of their 3×3 zone with their names beneath.
+- **Pacing: 150 steps/s** (Decision 20 amended). At 300 the whole of beat 1 was
+  over in about two seconds and the visitor arrived to a finished road.
+  `STEPS_PER_SECOND` is now exported, and `spec/reduced-motion.test.ts` reads it
+  rather than copying the number.
+
+### Field v4.1, and the default ρ decided by numbers
+
+**v4.1** clears the corridor between the zones — y 18–22 from the nest's right to
+the food's left — and moves the four blocks that stood in it to just outside.
+**2196 nodes, 4165 edges, 204 blocked cells, 20 blocks all between 2×2 and 4×4.**
+
+**BFS zone to zone is now 45, not 47.** That is arithmetic, not a slip: with the
+corridor clear the straight line is walkable, so the shortest route is exactly the
+distance between the zone edges, 52 − 7. It was 47 only because two blocks stood
+across row 20.
+
+The director's expectation for the ρ sweep, written before the run: *all three
+rates 1.1–1.3×, all healing within 250 steps; if so the default becomes 0.005.*
+
+| ρ | 4 s | 10 s | 20 s | healed after the break |
+|---|---|---|---|---|
+| 0.005 | 2.31× | 4.01× | **1.70×** | 250 steps |
+| 0.01 (current default) | 2.69× | 1.13× | **1.13×** | 250 steps |
+| 0.02 | no reading | 1.18× | **1.00×** | 250 steps |
+
+**Half of it held, and it is the half that decides the question.** Every rate now
+heals in 250 steps — clearing the corridor fixed what the previous round found,
+where ρ = 0.01 was the one rate that never healed. But the readings are not all
+1.1–1.3×: **0.005 settles at 1.70×**, well outside it, while 0.01 and 0.02 land at
+1.13× and 1.00×. The stated condition for defaulting to 0.005 was not met, so the
+default is **not** changed here — 0.01 stands, and 0.02 is the better number if
+the director wants the tightest road. `FIELD_RHO` is untouched pending that word.
+
+**What the clear corridor cost.** The road is now dead straight. The reading is
+excellent — 1.02× at twenty seconds on the page's seed — but the blocks sit
+outside the corridor and nothing bends the road, so the "断续微弯的带子" in the
+target picture is a ruled line instead. Straightness and the reading are the same
+lever here: the blocks that made it wind are the blocks that made it 1.96×.
+Reported rather than fixed, because the trade is the director's.
+
+### Turn 2 — the verb: drawing a wall
+
+`ρ` default is now **0.02**, the director's pick from turn 1's numbers (1.00× at
+twenty seconds, and a broken road healed within 250 steps).
+
+**The engine grew exactly one function**, as ruled: `toggleCell(colony, node)`.
+Everything else in `src/sim` is untouched. What it guarantees, and what
+`spec/draw.test.ts` holds:
+
+- **Edge indices never move**, so the pheromone arrays keep meaning what they
+  meant. Asserted directly rather than assumed.
+- **Scent survives on every edge the wall did not touch** — and on the ones it
+  did. Rubbing a wall out restores a road rather than a blank strip: a road you
+  break remembers it was a road.
+- **The two arrival zones cannot be walled.** Sealing either would end the
+  simulation rather than change it.
+- **No ant is ever left standing inside a wall.** They are moved to the nearest
+  cell by a breadth-first search over the fixture's own adjacency in edge order,
+  so the same wall always displaces the same ants to the same cells — proven by
+  digesting two identically-walled colonies. Proven red-capable too: disabling
+  the eviction turns that test red on its own.
+- **The BFS oracle is told the same thing the ants are** (`induce`'s new
+  `blocked` option), so the reading is never measured against a route that no
+  longer exists. Wall the field edge to edge and the oracle returns null.
+
+**"no route" is a state, not a number.** With the food sealed off the readout
+says so; dividing by a route that does not exist would produce something
+enormous that looks like a reading.
+
+**Reset keeps the walls and restarts the ants** — the walls are the visitor's,
+not the run's.
+
+**How a still shows a drag.** The verb is a pointer gesture and a screenshot
+cannot drag, so the page's prime gained `?wall=x:y0-y1`, one vertical bar. Every
+cell it builds is a cell the visitor could build by hand, and the screenshots say
+which prime made them.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–23 are recorded, 9 and 10 dissolved. Turn B is
-`toggleCell` and drawing walls; turn C is the speed control, the exponential
-slider mapping, the re-pointed behaviour tests and derive. Beat 4's fixture source is
+**None settled by me.** Decisions 1–24 are recorded, 9 and 10 dissolved. Turn 3
+is the speed control, and `CLAUDE.md`'s "three controls, hard cap" is amended
+with it. Beat 4's fixture source is
 deferred to slice 8 as a condition, not an open question.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its

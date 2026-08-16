@@ -139,6 +139,12 @@ export interface Colony {
   /** Rebuilt on toggle; edge indices stay stable so pheromone survives. */
   adjacency: readonly (readonly Hop[])[];
   shortcutOpen: boolean;
+  /**
+   * Cells the visitor has walled off. Terrain they added, kept apart from the
+   * fixture's own walls so `Reset` can restart the colony and leave them
+   * standing, and so the BFS oracle can be told the same thing the engine knows.
+   */
+  readonly drawnWalls: Set<NodeId>;
   readonly home: Float64Array;
   readonly foodTrail: Float64Array;
   readonly at: Int32Array;
@@ -200,6 +206,7 @@ export function createColony(
     ),
     adjacency: adjacencyOf(fixture, index, false),
     shortcutOpen: false,
+    drawnWalls: new Set<NodeId>(),
     home: new Float64Array(fixture.edges.length),
     foodTrail: new Float64Array(fixture.edges.length),
     at: new Int32Array(ants).fill(nest),
@@ -300,7 +307,110 @@ export function step(colony: Colony): void {
 export function toggleShortcut(colony: Colony): void {
   const index = new Map(colony.fixture.nodes.map((node, i) => [node, i]));
   colony.shortcutOpen = !colony.shortcutOpen;
-  colony.adjacency = adjacencyOf(colony.fixture, index, colony.shortcutOpen);
+  colony.adjacency = adjacencyOf(
+    colony.fixture,
+    index,
+    colony.shortcutOpen,
+    colony.drawnWalls,
+  );
+}
+
+/** Cells the visitor may never wall: the two arrival zones. */
+function isProtected(colony: Colony, node: NodeId): boolean {
+  const { fixture } = colony;
+  return (
+    (fixture.nestZone ?? [fixture.nest]).includes(node) ||
+    (fixture.foodZone ?? [fixture.food]).includes(node)
+  );
+}
+
+/**
+ * The one verb: make an open cell a wall, or make it open again.
+ *
+ * Returns whether anything changed — the drawing gesture calls this for every
+ * cell it crosses, most of which are already in the state it wants.
+ *
+ * Three things it deliberately does NOT do:
+ *
+ * · It does not touch the pheromone arrays. Edge indices are fixture order and
+ *   never re-ordered, so scent on every unaffected edge survives untouched, and
+ *   scent on the edges that just closed is still there if the visitor rubs the
+ *   wall out again. A road you break and repair remembers it was a road.
+ * · It does not renumber anything. `adjacencyOf` rebuilds from the same edge
+ *   list, so an edge is the same edge before and after.
+ * · It does not let the visitor wall the nest or the food. Sealing either would
+ *   end the simulation rather than change it, and "no route" is a state the page
+ *   should be able to show without being a dead end.
+ */
+export function toggleCell(colony: Colony, node: NodeId): boolean {
+  const index = new Map(colony.fixture.nodes.map((cell, i) => [cell, i]));
+  if (!index.has(node) || isProtected(colony, node)) return false;
+
+  if (colony.drawnWalls.has(node)) colony.drawnWalls.delete(node);
+  else colony.drawnWalls.add(node);
+
+  colony.adjacency = adjacencyOf(
+    colony.fixture,
+    index,
+    colony.shortcutOpen,
+    colony.drawnWalls,
+  );
+  evictAnts(colony, index);
+  return true;
+}
+
+/**
+ * Move any ant that is now standing inside a wall to the nearest cell it could
+ * actually be standing on.
+ *
+ * Deterministic by construction: a breadth-first search over the fixture's own
+ * adjacency, visiting in edge order, so the same wall drawn on the same colony
+ * always displaces the same ants to the same cells. The alternative — leaving
+ * them where they are — reads as ants embedded in a wall and makes
+ * `antNodes()` report a cell that is not on the graph.
+ */
+function evictAnts(colony: Colony, index: ReadonlyMap<NodeId, number>): void {
+  if (colony.drawnWalls.size === 0) return;
+  const { fixture } = colony;
+  const walled = new Set<number>();
+  for (const node of colony.drawnWalls) {
+    const at = index.get(node);
+    if (at !== undefined) walled.add(at);
+  }
+
+  const rescue = new Map<number, number>();
+  const nearestOpen = (from: number): number => {
+    const cached = rescue.get(from);
+    if (cached !== undefined) return cached;
+    // Over the UNWALLED graph, so an ant sealed inside a drawn block still finds
+    // its way out to the nearest cell that exists.
+    const all = adjacencyOf(fixture, index, colony.shortcutOpen);
+    const seen = new Set<number>([from]);
+    const queue = [from];
+    for (let head = 0; head < queue.length; head += 1) {
+      const at = queue[head] as number;
+      for (const hop of all[at] ?? []) {
+        if (seen.has(hop.to)) continue;
+        if (!walled.has(hop.to)) {
+          rescue.set(from, hop.to);
+          return hop.to;
+        }
+        seen.add(hop.to);
+        queue.push(hop.to);
+      }
+    }
+    rescue.set(from, from);
+    return from;
+  };
+
+  for (let ant = 0; ant < colony.at.length; ant += 1) {
+    const at = colony.at[ant] as number;
+    if (!walled.has(at)) continue;
+    colony.at[ant] = nearestOpen(at);
+    // The edge it came in by may not exist any more, so its momentum is void.
+    colony.lastEdge[ant] = -1;
+    colony.heading[ant] = -1;
+  }
 }
 
 export function antCount(colony: Colony): number {

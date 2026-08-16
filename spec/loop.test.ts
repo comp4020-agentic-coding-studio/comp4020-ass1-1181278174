@@ -130,4 +130,34 @@ describe("the frame clock drives an accumulator, not the simulation", () => {
     expect(run.loop.running).toBe(false);
     expect(run.steps()).toBe(stoppedAt);
   });
+
+  it("changes the pace and nothing else when the speed control moves", () => {
+    // The claim the speed control makes: only the pace. Two runs of the same
+    // wall-clock time at different rates do DIFFERENT amounts of simulation —
+    // that is the point — but the loop must not lose or invent steps doing it.
+    const slow = harness();
+    slow.loop.start();
+    for (let i = 0; i < 25; i += 1) slow.frame(FRAME); // half a second at RATE
+    slow.loop.setStepsPerSecond(RATE * 2);
+    for (let i = 0; i < 25; i += 1) slow.frame(FRAME); // half a second at 2x
+
+    // 50 steps earned at the first rate, 100 at the second.
+    expect(slow.steps()).toBe(RATE / 2 + RATE);
+  });
+
+  it("carries the accumulator across a rate change", () => {
+    // A fraction of a step already paid for in wall time is not thrown away:
+    // clearing the accumulator on every change would let a visitor who nudges
+    // the control lose simulation they had waited through.
+    const run = harness();
+    run.loop.start();
+    // 15ms at 10ms a step: one step taken, 5ms banked.
+    run.frame(15);
+    expect(run.steps()).toBe(1);
+    // Double the rate — 5ms a step — and hand it 5ms more. The banked 5 plus the
+    // new 5 is two steps at the new rate. Clearing the accumulator would give one.
+    run.loop.setStepsPerSecond(RATE * 2);
+    run.frame(5);
+    expect(run.steps()).toBe(3);
+  });
 });

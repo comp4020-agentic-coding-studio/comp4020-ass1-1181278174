@@ -11,7 +11,7 @@
 // run/pause/reset. "Watch it grow" is not a fourth — it is the run control under
 // a preference that forbids autoplay, and it is absent otherwise.
 
-import type { Fixture } from "../fixtures/double-bridge.ts";
+import type { Fixture, NodeId } from "../fixtures/double-bridge.ts";
 import { induce } from "../fixtures/graph.ts";
 import { shortestPathBetween } from "../oracle/bfs.ts";
 import type { Colony } from "../sim/engine.ts";
@@ -27,12 +27,24 @@ import { LIGHT } from "./palette.ts";
 import { createStripView } from "./strip.ts";
 
 /**
- * Simulation steps per wall-clock second (Decision 20). Fixed; the frame rate
- * cannot move it. A trip on the field is 30 moves through the doorway and 58 over
- * the top — at the bridge's 90 a single trip would take most of a second, and
- * beat 1 would not be "a road forms while you watch".
+ * Simulation steps per wall-clock second (Decision 20, amended by Decision 24).
+ * Fixed; the frame rate cannot move it. At 300 the whole of beat 1 — four hundred
+ * ants pouring out, spreading, and pulling into a road — was over in about two
+ * seconds, and the visitor arrived to a finished road. At 150 the pour-out and the
+ * search stay on screen long enough to be seen, and a trip still takes well under
+ * a second.
+ *
+ * Exported so the tests and the screenshot script convert seconds to steps with
+ * this number rather than a copy of it.
  */
-const STEPS_PER_SECOND = 300;
+export const STEPS_PER_SECOND = 150;
+
+/**
+ * The three paces the visitor can pick (Decision 25). Only the pace changes:
+ * the engine is fixed-step, so the same step count gives the same colony at any
+ * of them — 75 is for watching an individual ant, 300 for watching the road.
+ */
+export const SPEEDS = [75, 150, 300] as const;
 /** An aria-live region that fires every frame says nothing. One update a second. */
 const ANNOUNCE_MS = 1000;
 /** Decision 19. Four hundred, so the visitor sees them pour out of the nest. */
@@ -53,6 +65,13 @@ export interface Prime {
   readonly open?: boolean;
   /** Steps to run AFTER opening, so a still shows the tick and what followed. */
   readonly after?: number;
+  /**
+   * A wall to draw before `after` runs, as `x:y0-y1` — one vertical bar. The
+   * drawing verb is a drag, and a screenshot cannot drag; this is the smallest
+   * thing that lets a still show a broken road reconnecting. Every cell it
+   * builds is a cell the visitor could build by hand.
+   */
+  readonly wall?: string;
   readonly rho?: number;
 }
 
@@ -61,6 +80,9 @@ export interface Page {
   colony(): Colony;
   readonly rendersPerSecond: number | undefined;
   toggleShortcut(): void;
+  /** The one verb, for the tests: build or rub out one cell. */
+  toggleCell(node: NodeId): boolean;
+  setSpeed(rate: number): void;
   setRho(value: number): void;
   destroy(): void;
 }
@@ -78,16 +100,19 @@ export function readPrime(search: string): Prime | undefined {
     const value = Number(raw);
     return raw === null || Number.isNaN(value) ? undefined : value;
   };
+  const wall = params.get("wall") ?? undefined;
   const prime: Prime = {
     steps: num("steps"),
     open: params.has("open"),
     after: num("after"),
+    wall,
     rho: num("rho"),
   };
   return prime.steps === undefined &&
     !prime.open &&
     prime.after === undefined &&
-    prime.rho === undefined
+    prime.rho === undefined &&
+    wall === undefined
     ? undefined
     : prime;
 }
@@ -106,6 +131,10 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   const runButton = el<HTMLButtonElement>("run");
   const resetButton = el<HTMLButtonElement>("reset");
   const growButton = el<HTMLButtonElement>("grow");
+  const clearButton = el<HTMLButtonElement>("clear");
+  const speedInputs = SPEEDS.map((rate) =>
+    el<HTMLInputElement>(`speed-${rate}`),
+  );
 
   const plan = motionPlan(deps.reducedMotion);
   const { fixture } = deps;
@@ -121,21 +150,31 @@ export function createPage(doc: Document, deps: PageDeps): Page {
 
   // Both routes, measured once: the reading needs the current one, and the
   // secondary readout needs the midpoint to tell the two apart.
-  const bfsFor = (openShortcut: boolean): number =>
+  const bfsFor = (openShortcut: boolean): number | null =>
     shortestPathBetween(
-      induce(fixture, { openShortcut }),
+      induce(fixture, { openShortcut, blocked: colony.drawnWalls }),
       fixture.nestZone ?? [fixture.nest],
       fixture.foodZone ?? [fixture.food],
-    ) as number;
-  const BFS_LONG = bfsFor(false);
-  const BFS_SHORT = bfsFor(true);
-  /** Walls the visitor has drawn. Turn B gives them a way to change it. */
-  let wallsDrawn = 0;
+    );
+  /**
+   * The shortest route over the terrain as it NOW stands — walls the visitor has
+   * drawn included. Recomputed on every toggle rather than every frame: a BFS
+   * over 2196 cells is cheap, but not 150 times a second, and the terrain only
+   * changes when somebody changes it.
+   */
+  let bfs: number | null = bfsFor(colony.shortcutOpen);
+  const bfsNow = (): number | null => bfs;
+  const refreshTerrain = (): void => {
+    bfs = bfsFor(colony.shortcutOpen);
+  };
 
-  const bfsNow = (): number => (colony.shortcutOpen ? BFS_SHORT : BFS_LONG);
-
-  const readNow = (): Reading =>
-    reading(engine.completedTripLengths(colony), bfsNow(), READING_WINDOW);
+  const readNow = (): Reading => {
+    const against = bfsNow();
+    // No route at all is a STATE, not a number — and not a zero, which would
+    // divide into something enormous and look like a reading.
+    if (against === null) return { status: "no reading yet", ratio: null };
+    return reading(engine.completedTripLengths(colony), against, READING_WINDOW);
+  };
 
   function step(): void {
     engine.step(colony);
@@ -148,20 +187,24 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     strip.draw(series, openedAtSample);
 
     const now = readNow();
-    const text =
-      now.status === "ok"
+    const routeless = bfsNow() === null;
+    const text = routeless
+      ? "no route"
+      : now.status === "ok"
         ? `${(now.ratio as number).toFixed(2)}×`
         : "no reading yet";
     if (readout.textContent !== text) readout.textContent = text;
-    note.textContent =
-      now.status === "ok"
+    note.textContent = routeless
+      ? "your walls have sealed the food off"
+      : now.status === "ok"
         ? `mean trip ÷ shortest possible (${bfsNow()} moves)`
         : `warming up — ${colony.tripsCompleted} of ${READING_WINDOW.minTrips} trips`;
 
     // Secondary readout, never thresholded. On open ground the thing worth
     // counting is what the VISITOR has added, not which of two routes was taken
     // — there is only one kind of route now. Turn B makes this number move.
-    share.textContent = `walls drawn: ${wallsDrawn}`;
+    share.textContent = `walls drawn: ${colony.drawnWalls.size}`;
+    clearButton.hidden = colony.drawnWalls.size === 0;
 
     // Throttled: the region is polite, but a number that changes 60 times a
     // second is not information, it is noise with a screen reader attached.
@@ -204,12 +247,23 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     rhoInput.setAttribute("aria-valuetext", value.toFixed(3));
   }
 
+  /** Restart the colony. The walls stay: they are the visitor's, not the run's. */
   function reset(): void {
+    const walls = [...colony.drawnWalls];
     colony = engine.createColony(fixture, { rho, seed: 1, ants: ANTS });
+    for (const cell of walls) engine.toggleCell(colony, cell);
     series = [];
     openedAtSample = null;
-    wallsDrawn = 0;
+    refreshTerrain();
     render();
+  }
+
+  /** Build or rub out one cell, and tell the reading the ground moved. */
+  function toggleCell(node: NodeId): boolean {
+    if (!engine.toggleCell(colony, node)) return false;
+    refreshTerrain();
+    render();
+    return true;
   }
 
   const loop = createLoop({
@@ -224,6 +278,88 @@ export function createPage(doc: Document, deps: PageDeps): Page {
 
   // --- controls -------------------------------------------------------------
 
+  /**
+   * Drawing. The state of the cell you press on decides whether this whole
+   * stroke builds or rubs out — so dragging along a wall you just drew rubs it
+   * out rather than flickering cell by cell, and a stroke never does both.
+   */
+  let stroke: "build" | "erase" | null = null;
+  let strokeLast: NodeId | null = null;
+
+  const applyStroke = (node: NodeId | null): void => {
+    if (!node || node === strokeLast || stroke === null) return;
+    strokeLast = node;
+    const isWall = colony.drawnWalls.has(node);
+    if (stroke === "build" ? isWall : !isWall) return;
+    toggleCell(node);
+  };
+
+  const onStagePointerDown = (event: PointerEvent): void => {
+    const node = canvas.cellAt(event.clientX, event.clientY);
+    if (!node) return;
+    event.preventDefault();
+    stage.setPointerCapture?.(event.pointerId);
+    stroke = colony.drawnWalls.has(node) ? "erase" : "build";
+    strokeLast = null;
+    applyStroke(node);
+  };
+  const onStagePointerMove = (event: PointerEvent): void => {
+    if (stroke === null) return;
+    applyStroke(canvas.cellAt(event.clientX, event.clientY));
+  };
+  const onStagePointerUp = (): void => {
+    stroke = null;
+    strokeLast = null;
+  };
+
+  /** Arrow keys move a visible cursor, Enter toggles, Escape puts it away. */
+  const onStageKeyDown = (event: KeyboardEvent): void => {
+    const steps: Record<string, readonly [number, number]> = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1],
+    };
+    const move = steps[event.key];
+    if (move) {
+      event.preventDefault();
+      const here = canvas.cursor() ?? fixture.nest;
+      const [x, y] = here.split(",").map(Number) as [number, number];
+      const next = `${x + move[0]},${y + move[1]}`;
+      if (fixture.cells?.has(next) || colony.drawnWalls.has(next)) {
+        canvas.setCursor(next);
+      }
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      const here = canvas.cursor();
+      if (here) toggleCell(here);
+      else canvas.setCursor(fixture.nest);
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      canvas.setCursor(null);
+    }
+  };
+
+  const onClearClick = (): void => {
+    for (const cell of [...colony.drawnWalls]) engine.toggleCell(colony, cell);
+    refreshTerrain();
+    render();
+  };
+
+  function setSpeed(rate: number): void {
+    loop.setStepsPerSecond(rate);
+    for (const input of speedInputs) {
+      input.checked = Number(input.value) === rate;
+    }
+  }
+  const onSpeedChange = (event: Event): void => {
+    setSpeed(Number((event.currentTarget as HTMLInputElement).value));
+  };
+
   const onRhoInput = (): void => setRho(Number(rhoInput.value));
   const onRunClick = (): void => setRunning(!loop.running);
   const onResetClick = (): void => reset();
@@ -234,6 +370,15 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     growButton.hidden = true;
   };
 
+  stage.addEventListener("pointerdown", onStagePointerDown as EventListener);
+  stage.addEventListener("pointermove", onStagePointerMove as EventListener);
+  stage.addEventListener("pointerup", onStagePointerUp);
+  stage.addEventListener("pointercancel", onStagePointerUp);
+  stage.addEventListener("keydown", onStageKeyDown as EventListener);
+  clearButton.addEventListener("click", onClearClick);
+  for (const input of speedInputs) {
+    input.addEventListener("change", onSpeedChange as EventListener);
+  }
   rhoInput.addEventListener("input", onRhoInput);
   runButton.addEventListener("click", onRunClick);
   resetButton.addEventListener("click", onResetClick);
@@ -244,10 +389,18 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   rhoInput.step = String(FIELD_RHO.step);
   setRho(rho);
   growButton.hidden = !plan.needsStartButton;
+  setSpeed(STEPS_PER_SECOND);
 
   if (deps.prime) {
     for (let i = 0; i < (deps.prime.steps ?? 0); i += 1) step();
     if (deps.prime.open) toggleShortcut();
+    const bar = /^(\d+):(\d+)-(\d+)$/.exec(deps.prime.wall ?? "");
+    if (bar) {
+      const x = Number(bar[1]);
+      for (let y = Number(bar[2]); y <= Number(bar[3]); y += 1) {
+        toggleCell(`${x},${y}`);
+      }
+    }
     for (let i = 0; i < (deps.prime.after ?? 0); i += 1) step();
   }
 
@@ -259,10 +412,21 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     colony: () => colony,
     rendersPerSecond: plan.rendersPerSecond,
     toggleShortcut,
+    toggleCell,
+    setSpeed,
     setRho,
     destroy() {
       loop.stop();
       canvas.dispose();
+      stage.removeEventListener("pointerdown", onStagePointerDown as EventListener);
+      stage.removeEventListener("pointermove", onStagePointerMove as EventListener);
+      stage.removeEventListener("pointerup", onStagePointerUp);
+      stage.removeEventListener("pointercancel", onStagePointerUp);
+      stage.removeEventListener("keydown", onStageKeyDown as EventListener);
+      clearButton.removeEventListener("click", onClearClick);
+      for (const input of speedInputs) {
+        input.removeEventListener("change", onSpeedChange as EventListener);
+      }
       rhoInput.removeEventListener("input", onRhoInput);
       runButton.removeEventListener("click", onRunClick);
       resetButton.removeEventListener("click", onResetClick);

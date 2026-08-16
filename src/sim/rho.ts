@@ -33,12 +33,17 @@ export const RHO = { locked: 0, default: 0.12, max: 0.25 } as const;
  * threshold in spec/oracles.md was measured on the bridge at those rates. One
  * constant serving two fixtures would be the same drift this file exists to stop.
  *
- * `default` is the cell Stage C measured as the best road on the field. It does
- * NOT switch when the doorway opens; that is what Stage D is for.
+ * `default` is measured on the field the page runs, not chosen: see the note on
+ * the value itself.
  */
 export const FIELD_RHO = {
   locked: 0,
-  default: 0.01,
+  /**
+   * Decided by measurement, not taste (Decision 24). On field v4.1 at 20 s:
+   * 0.005 settles at 1.70×, 0.01 at 1.13×, 0.02 at **1.00×** — the shortest
+   * route there is — and all three heal a broken road within 250 steps.
+   */
+  default: 0.02,
   max: 0.05,
   step: 0.001,
 } as const;

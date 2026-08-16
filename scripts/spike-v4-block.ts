@@ -28,13 +28,15 @@ import { reading } from "../src/sim/reading.ts";
 import { FIELD_RHO } from "../src/sim/rho.ts";
 
 const ANTS = 400;
-/** The road forms in ~10 s at 300 steps/s; block at 3000, as Decision 22 asks. */
+/** 3000 steps = 20 s at 150 steps/s (Decision 24). The break lands after the road. */
 const SETTLE = 3_000;
 const AFTER = 12_000;
 const SAMPLE_EVERY = 250;
 const WINDOW = 300;
 const MIN_TRIPS = 65;
 const SEEDS = [1, 2, 3];
+/** 150 steps/s (Decision 24): 4 s = 600 steps, 10 s = 1500, 20 s = 3000. */
+const FRAMES = [600, 1500, 3000] as const;
 const HEALED_AT = 1.6;
 
 /**
@@ -105,6 +107,7 @@ function map(colony: engine.Colony): string {
 
 interface Result {
   readonly before: number;
+  readonly frames: Map<number, number>;
   readonly tripsBefore: number;
   readonly trapped: number;
   readonly healed: number;
@@ -122,13 +125,19 @@ function run(rho: number, seed: number, wantMaps: boolean): Result {
     tripHistory: Infinity,
   });
   engine.toggleShortcut(colony); // bar OPEN: plain open ground
-  for (let s = 1; s <= SETTLE; s += 1) engine.step(colony);
-  const beforeValue = reading(engine.completedTripLengths(colony), BFS_OPEN, {
-    window: WINDOW,
-    minTrips: MIN_TRIPS,
-  });
-  const before =
-    beforeValue.status === "ok" ? (beforeValue.ratio as number) : Number.NaN;
+  const take = () => {
+    const value = reading(engine.completedTripLengths(colony), BFS_OPEN, {
+      window: WINDOW,
+      minTrips: MIN_TRIPS,
+    });
+    return value.status === "ok" ? (value.ratio as number) : Number.NaN;
+  };
+  const frames = new Map<number, number>();
+  for (let s = 1; s <= SETTLE; s += 1) {
+    engine.step(colony);
+    if ((FRAMES as readonly number[]).includes(s)) frames.set(s, take());
+  }
+  const before = take();
   const tripsBefore = colony.tripsCompleted;
 
   engine.toggleShortcut(colony); // bar SHUT: the road is cut
@@ -165,7 +174,7 @@ function run(rho: number, seed: number, wantMaps: boolean): Result {
     if (s === 3000) at3000 = ratio;
     if (s === AFTER) atEnd = ratio;
   }
-  return { before, tripsBefore, trapped, healed, at1000, at3000, atEnd, maps };
+  return { before, frames, tripsBefore, trapped, healed, at1000, at3000, atEnd, maps };
 }
 
 function main(): void {
@@ -176,16 +185,21 @@ function main(): void {
   };
   const t0 = Date.now();
 
-  say(`# Breaking the road on open ground — field v4`);
+  say(`# The default ρ, decided by numbers — field v4.1`);
   say();
   say(
     `**Spike only**: nothing adopted, no default changed, no threshold or \`RHO\` touched.`,
   );
   say();
   say(
+    `The director's expectation, written before the run: *all three rates 1.1-1.3x, ` +
+      `all healing within 250 steps; if so the default becomes 0.005.*`,
+  );
+  say();
+  say(
     `Beat 2 of Decision 22's claim A, measured before anything is built to do it. ` +
       `${ANTS} ants, ${SEEDS.length} seeds, D=20 T=80 W=3 w=4 ε=0. Settle **${SETTLE} steps** ` +
-      `— about ten seconds at 300 steps/s — then an 11-cell bar (x = 30, y = 15..25) shuts ` +
+      `— twenty seconds at 150 steps/s — then an 11-cell bar (x = 30, y = 15..25) shuts ` +
       `across the road, then ${AFTER} more.`,
   );
   say();
@@ -197,12 +211,12 @@ function main(): void {
   );
   say();
   say(
-    `| ρ | before (÷${BFS_OPEN}) | trips before | trapped on the bar | +1000 | +3000 | +${AFTER} | healed at |`,
+    `| ρ | 4 s | 10 s | 20 s (= break) | trips before | trapped | +1000 | +${AFTER} | healed at |`,
   );
-  say(`|---|---|---|---|---|---|---|---|`);
+  say(`|---|---|---|---|---|---|---|---|---|`);
 
   const keep: { rho: number; maps: string[] }[] = [];
-  for (const rho of [0, 0.002, 0.005, FIELD_RHO.default, 0.02, 0.05]) {
+  for (const rho of [0.005, FIELD_RHO.default, 0.02]) {
     const runs = SEEDS.map((seed, i) =>
       run(rho, seed, i === 0 && (rho === 0 || rho === FIELD_RHO.default)),
     );
@@ -211,9 +225,10 @@ function main(): void {
       keep.push({ rho, maps: (runs[0] as Result).maps });
     }
     say(
-      `| ${rho}${rho === FIELD_RHO.default ? " (page default)" : ""} | ${fmt(m((r) => r.before))}× | ` +
+      `| ${rho}${rho === FIELD_RHO.default ? " (current default)" : ""} | ` +
+        FRAMES.map((f) => `${fmt(m((r) => r.frames.get(f) ?? Number.NaN))}× | `).join("") +
         `${m((r) => r.tripsBefore)} | ${m((r) => r.trapped)} | ${fmt(m((r) => r.at1000))}× | ` +
-        `${fmt(m((r) => r.at3000))}× | ${fmt(m((r) => r.atEnd))}× | ${st(m((r) => r.healed))} |`,
+        `${fmt(m((r) => r.atEnd))}× | ${st(m((r) => r.healed))} |`,
     );
   }
   say();

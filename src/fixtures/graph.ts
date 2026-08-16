@@ -16,9 +16,16 @@ export interface InducedGraph {
 export interface InduceOptions {
   /** Open the segment marked `shortcut` — what the visitor's toggle does. */
   readonly openShortcut?: boolean;
+  /**
+   * Cells the visitor has walled off since the fixture was built. Terrain, not
+   * rules: the BFS oracle and the engine must agree about them, and they can
+   * only agree if they are told the same thing here.
+   */
+  readonly blocked?: ReadonlySet<NodeId>;
 }
 
 function isOpen(edge: FixtureEdge, options: InduceOptions): boolean {
+  if (options.blocked?.has(edge.a) || options.blocked?.has(edge.b)) return false;
   if (edge.shortcut && options.openShortcut) return true;
   return edge.closed !== true;
 }
@@ -97,13 +104,14 @@ export function adjacencyOf(
   fixture: Fixture,
   index: ReadonlyMap<NodeId, number>,
   openShortcut: boolean,
+  blocked?: ReadonlySet<NodeId>,
 ): readonly (readonly Hop[])[] {
   // Via a Map, not `indexOf` per edge. That was O(E²) and invisible at the double
   // bridge's twelve edges; the field has four thousand, where it is 16 million
   // reference comparisons every time a colony is made or the gap is toggled.
   const position = new Map(fixture.edges.map((edge, e) => [edge, e]));
   const open = new Set(
-    induce(fixture, { openShortcut }).openEdges.map(
+    induce(fixture, { openShortcut, blocked }).openEdges.map(
       (edge) => position.get(edge) as number,
     ),
   );

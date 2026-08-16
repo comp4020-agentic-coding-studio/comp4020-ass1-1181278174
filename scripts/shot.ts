@@ -35,13 +35,19 @@ const VIEWPORTS = [
 // reaches a state the visitor reaches by hand. Every one of these is a state the
 // controls produce; nothing here is reachable only from a URL.
 const STATES = [
-  // Three moments at 300 steps/s. Primed to an exact step count, NOT left to run:
+  // Three moments at 150 steps/s (Decision 24). Primed to an exact step count,
+  // NOT left to run:
   // headless gives a page only a handful of rAF frames however long the virtual
   // time budget, so an unprimed still shows a fraction of what a real browser
   // runs in the same wall time.
-  { suffix: "-4s", query: "?steps=1200" },
-  { suffix: "-10s", query: "?steps=3000" },
-  { suffix: "-20s", query: "?steps=6000" },
+  { suffix: "-4s", query: "?steps=600" },
+  { suffix: "-10s", query: "?steps=1500" },
+  { suffix: "-20s", query: "?steps=3000" },
+  // The road broken and reconnecting: settle 20 s, drop an 11-cell bar across
+  // the corridor, then run 10 s more. The verb is a drag and a still cannot
+  // drag, so the page's `?wall=x:y0-y1` prime builds exactly the cells a
+  // visitor would build by hand.
+  { suffix: "-broken", query: "?steps=3000&wall=30:15-25&after=1500" },
 ] as const;
 
 function binary(): string {

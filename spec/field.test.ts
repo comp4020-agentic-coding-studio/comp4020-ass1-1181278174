@@ -139,10 +139,57 @@ describe("v3 — the wall-and-doorway field the spikes cite", () => {
 });
 
 describe("v4 — open ground (Decision 22)", () => {
-  it("is 2208 nodes, 4193 edges, 47 moves zone to zone", () => {
-    expect(FIELD_V4.nodes.length).toBe(2208);
-    expect(FIELD_V4.edges.length).toBe(4193);
-    expect(bfs(FIELD_V4, FIELD_V4_SPEC, false)).toBe(47);
+  it("is 2196 nodes, 4165 edges, 45 moves zone to zone", () => {
+    expect(FIELD_V4.nodes.length).toBe(2196);
+    expect(FIELD_V4.edges.length).toBe(4165);
+    // v4.1 clears the corridor between the zones, so the straight line is now
+    // walkable and the shortest route is exactly the distance between the zone
+    // edges — 52 − 7. It was 47 while two blocks straddled row 20.
+    expect(bfs(FIELD_V4, FIELD_V4_SPEC, false)).toBe(45);
+    expect(FIELD_V4_SPEC.food[0] - 1 - (FIELD_V4_SPEC.nest[0] + 1)).toBe(45);
+  });
+
+  it("keeps the corridor between nest and food completely clear (v4.1)", () => {
+    // The road needs blocks to shape itself AROUND, not blocks standing in the
+    // doorway. With two of them across row 20 the colony looped the long way
+    // round the whole field and the reading sat at 1.96×.
+    for (const cell of FIELD_V4_SPEC.blocked) {
+      const [x, y] = cell.split(",").map(Number) as [number, number];
+      const inCorridor = y >= 18 && y <= 22 && x > FIELD_V4_SPEC.nest[0] + 3 && x < FIELD_V4_SPEC.food[0] - 3;
+      expect(inCorridor, `${cell} stands in the corridor`).toBe(false);
+    }
+  });
+
+  it("keeps every block between 2x2 and 4x4", () => {
+    const blocked = new Set(FIELD_V4_SPEC.blocked);
+    const seen = new Set<string>();
+    for (const cell of blocked) {
+      if (seen.has(cell)) continue;
+      const queue = [cell];
+      seen.add(cell);
+      const xs: number[] = [];
+      const ys: number[] = [];
+      while (queue.length > 0) {
+        const at = queue.pop() as string;
+        const [x, y] = at.split(",").map(Number) as [number, number];
+        xs.push(x);
+        ys.push(y);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const next = `${x + dx},${y + dy}`;
+          if (blocked.has(next) && !seen.has(next)) {
+            seen.add(next);
+            queue.push(next);
+          }
+        }
+      }
+      const w = Math.max(...xs) - Math.min(...xs) + 1;
+      const h = Math.max(...ys) - Math.min(...ys) + 1;
+      // Two blocks placed a cell apart merge into one big shape, which is how a
+      // 5x7 got in here once.
+      expect(w, `block at ${cell} is ${w} wide`).toBeLessThanOrEqual(4);
+      expect(h, `block at ${cell} is ${h} tall`).toBeLessThanOrEqual(4);
+      expect(Math.min(w, h)).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it("has NO wall and NO doorway — the verb is drawing them", () => {
@@ -176,7 +223,7 @@ describe("v4 — open ground (Decision 22)", () => {
       while (queue.length > 0) {
         const at = queue.pop() as string;
         const [x, y] = at.split(",").map(Number) as [number, number];
-        if (y >= 17 && y <= 23 && x > 9 && x < 50) touchesBand = true;
+        if (y >= 12 && y <= 27 && x > 9 && x < 50) touchesBand = true;
         for (const [dx, dy] of [
           [1, 0],
           [-1, 0],
@@ -194,6 +241,8 @@ describe("v4 — open ground (Decision 22)", () => {
     }
     expect(components).toBeGreaterThanOrEqual(15);
     expect(components).toBeLessThanOrEqual(20);
+    // v4.1: they sit BESIDE the corridor, not in it, so this counts the ones
+    // near enough to shape the road rather than the ones standing across it.
     expect(inTheBand).toBeGreaterThanOrEqual(3);
   });
 

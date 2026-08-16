@@ -2,24 +2,32 @@
 //
 // It READS the colony and writes pixels. It never steps, never mutates, never
 // holds simulation state — so a resize is a redraw and nothing else, which
-// spec/canvas.test.ts holds by digesting the engine across one.
+// spec/canvas.test.ts holds by digesting the engine across one. The only thing
+// it remembers between frames is where it last DREW each ant, so a dot can glide
+// from one cell to the next instead of hopping; that is display state, derived
+// from the colony every frame and never read back into it.
 //
 // What it draws, and nothing else:
 //   · the ground, and the wall and obstacle blocks solid over it
-//   · the two scents, as a glow — food-scent warm, home-scent fainter and cool
-//   · four hundred ants, black, one dot each
-//   · the nest and the food, as discs
+//   · the two scents, as crisp cell tiles — food-scent warm, home-scent cool
+//   · four hundred ants, black; the ones carrying food, red (their one bit)
+//   · the nest and the food, as discs with their names beneath them
 //   · the doorway, drawn as wall with a ring around it, because it is the one
 //     thing on the canvas the visitor may touch
 //
-// The glow is rendered into a 60×40 offscreen image — one pixel per cell — and
-// scaled up with the browser's own smoothing. Drawing 2185 rounded rectangles a
-// frame would cost far more and look worse: the smoothing is what makes a row of
-// cells read as a road rather than as a row of cells.
+// Scent is drawn as small squares, one per cell that carries enough of it — a
+// trail of marks on the ground rather than a fog over it. Only the cells above
+// the floor are drawn, and there are a few hundred of those, not 2208.
 //
-// Scent is mapped LOGARITHMICALLY. Linear was tried on the ASCII maps and is
-// useless here: the busiest edge runs four orders of magnitude above quiet
-// ground, so a linear ramp shows one bright cell and a black field.
+// Scent is mapped LOGARITHMICALLY from an ABSOLUTE floor — a few passes, in units
+// of the fixture's own per-step deposit D — up to whichever is higher: a fixed
+// "full road" mark, or the map's current peak. Linear shows one bright cell and a
+// blank field: the busiest edge runs four orders of magnitude above quiet ground.
+// Log against the peak alone shows the opposite early on — every cell an ant has
+// crossed once glows, and the field is a checkerboard. And a fixed ceiling alone
+// fails at ρ = 0, where nothing decays and after a minute every cell is "a full
+// road". So: nothing below a few passes, a full road at a hundred or so, and when
+// the field saturates the strongest line still stands out from the rest.
 
 import type { Fixture, NodeId } from "../fixtures/double-bridge.ts";
 import type { Colony } from "../sim/engine.ts";
@@ -34,11 +42,42 @@ export interface CanvasView {
   size(): { readonly width: number; readonly height: number };
   /** Did this client point land on the doorway? The one verb's target. */
   hitsGap(clientX: number, clientY: number): boolean;
+  /** Which cell is under this client point, or null if it is off the field. */
+  cellAt(clientX: number, clientY: number): NodeId | null;
+  /** Move the keyboard cursor, or hide it. Redraws. */
+  setCursor(node: NodeId | null): void;
+  cursor(): NodeId | null;
   dispose(): void;
 }
 
 /** How close a tap has to be to the doorway, in CSS pixels. Generous: it is small. */
 const TAP_SLOP = 28;
+
+/**
+ * Scent tiles, in units of the fixture's per-step deposit D. Below `low` passes a
+ * cell is not drawn at all; at `high` passes — or at the map's current peak,
+ * whichever is higher — it is a full road; `gamma` shapes the ramp between (in log
+ * space) and `alpha` caps it. The food-scent is the road, so it is the stronger of
+ * the two; the home-scent is fainter and cool, and it shows where the explorers
+ * have been.
+ */
+const FOOD_TILES = { low: 2.5, high: 120, gamma: 1.2, alpha: 0.8 } as const;
+const HOME_TILES = { low: 1.5, high: 250, gamma: 1.3, alpha: 0.5 } as const;
+/** A tile is this fraction of its cell, centred — marks, with ground between them. */
+const TILE = 0.62;
+/** Alpha is quantised, so a frame builds a handful of colour strings, not hundreds. */
+const ALPHA_STEPS = 12;
+
+/**
+ * Where an ant is drawn inside its cell, and how it gets there. Every ant has its
+ * own stable offset (so four hundred in a crowd read as a crowd, not as one dot),
+ * and its drawn position eases toward the cell it is really in — half the
+ * remaining distance each frame — so motion reads as a flow rather than a hop.
+ * A jump larger than `SNAP` cells is a reset, not a step, and is not eased.
+ */
+const JITTER = 0.84;
+const EASE = 0.5;
+const SNAP = 4;
 
 interface Grid {
   readonly columns: number;
@@ -130,6 +169,20 @@ function gridOf(fixture: Fixture): Grid {
   };
 }
 
+/** A stable pseudo-random offset in (−0.5, 0.5) per ant and axis. Not the PRNG: rendering only. */
+function jitter(ant: number, axis: 0 | 1): number {
+  let h = Math.imul(ant + 1, 0x9e3779b1) ^ (axis === 0 ? 0x85ebca6b : 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+  h ^= h >>> 15;
+  return ((h >>> 0) / 4294967296 - 0.5) * JITTER;
+}
+
+function rgb(triple: string): readonly [number, number, number] {
+  const [r, g, b] = triple.split(",").map(Number);
+  return [r ?? 0, g ?? 0, b ?? 0];
+}
+
 export function createCanvasView(
   canvas: HTMLCanvasElement,
   fixture: Fixture,
@@ -140,6 +193,16 @@ export function createCanvasView(
   const cells = grid.columns * grid.rows;
   const foodScent = new Float64Array(cells);
   const homeScent = new Float64Array(cells);
+  /** One ant, one step, fresh from its source: the unit the tiles are scaled in. */
+  const D = fixture.params.depositPerStep ?? 1;
+  const swatch = (colour: readonly [number, number, number]): readonly string[] =>
+    Array.from(
+      { length: ALPHA_STEPS + 1 },
+      (_, i) =>
+        `rgba(${colour[0]}, ${colour[1]}, ${colour[2]}, ${(i / ALPHA_STEPS).toFixed(3)})`,
+    );
+  const foodSwatch = swatch(rgb(palette.foodScent));
+  const homeSwatch = swatch(rgb(palette.homeScent));
 
   let width = 0;
   let height = 0;
@@ -148,6 +211,12 @@ export function createCanvasView(
   let offsetX = 0;
   let offsetY = 0;
   let last: Colony | null = null;
+  let cursorAt: NodeId | null = null;
+
+  /** Where each ant was last drawn, in cell units. Display state only. */
+  let drawnFor: Colony | null = null;
+  let drawnX = new Float32Array(0);
+  let drawnY = new Float32Array(0);
 
   const context = (): CanvasRenderingContext2D | null => {
     try {
@@ -160,25 +229,6 @@ export function createCanvasView(
       return null;
     }
   };
-
-  /** One pixel per cell, scaled up by the browser. Rebuilt when the box changes. */
-  let glow: ImageData | null = null;
-  let glowCanvas: HTMLCanvasElement | null = null;
-
-  function ensureGlow(): CanvasRenderingContext2D | null {
-    if (!glowCanvas) {
-      glowCanvas = canvas.ownerDocument.createElement("canvas");
-      glowCanvas.width = grid.columns;
-      glowCanvas.height = grid.rows;
-    }
-    try {
-      const ctx = glowCanvas.getContext("2d");
-      if (ctx && !glow) glow = ctx.createImageData(grid.columns, grid.rows);
-      return ctx;
-    } catch {
-      return null;
-    }
-  }
 
   function measure(): void {
     const box = canvas.getBoundingClientRect();
@@ -199,10 +249,53 @@ export function createCanvasView(
   const px = (x: number) => offsetX + x * scale;
   const py = (y: number) => offsetY + y * scale;
 
-  function paintScents(colony: Colony): void {
+  /** Draw one map as tiles: log-scaled between `low` and `high` passes, quantised. */
+  function paintTiles(
+    ctx: CanvasRenderingContext2D,
+    scent: Float64Array,
+    peak: number,
+    colours: readonly string[],
+    tiles: {
+      readonly low: number;
+      readonly high: number;
+      readonly gamma: number;
+      readonly alpha: number;
+    },
+  ): void {
+    const low = tiles.low * D;
+    const from = Math.log1p(low);
+    const span = Math.log1p(Math.max(tiles.high * D, peak)) - from || 1;
+    const size = scale * TILE;
+    const pad = (scale - size) / 2;
+    let current = -1;
+    for (let cell = 0; cell < cells; cell += 1) {
+      if (grid.open[cell] !== 1) continue;
+      const value = scent[cell] as number;
+      if (value <= low) continue;
+      const lifted = Math.pow(
+        Math.min(1, (Math.log1p(value) - from) / span),
+        tiles.gamma,
+      );
+      const step = Math.round(Math.min(1, lifted) * tiles.alpha * ALPHA_STEPS);
+      if (step <= 0) continue;
+      if (step !== current) {
+        current = step;
+        ctx.fillStyle = colours[step] as string;
+      }
+      ctx.fillRect(
+        px(cell % grid.columns) + pad,
+        py(Math.floor(cell / grid.columns)) + pad,
+        size,
+        size,
+      );
+    }
+  }
+
+  function paintScents(ctx: CanvasRenderingContext2D, colony: Colony): void {
     foodScent.fill(0);
     homeScent.fill(0);
-    let peak = 0;
+    let foodPeak = 0;
+    let homePeak = 0;
     for (let e = 0; e < grid.edgeA.length; e += 1) {
       const a = grid.edgeA[e] as number;
       const b = grid.edgeB[e] as number;
@@ -215,56 +308,43 @@ export function createCanvasView(
       if (f > (foodScent[b] as number)) foodScent[b] = f;
       if (h > (homeScent[a] as number)) homeScent[a] = h;
       if (h > (homeScent[b] as number)) homeScent[b] = h;
-      if (f > peak) peak = f;
-      if (h > peak) peak = h;
+      if (f > foodPeak) foodPeak = f;
+      if (h > homePeak) homePeak = h;
     }
+    // Cool under warm: where both are strong the road wins.
+    paintTiles(ctx, homeScent, homePeak, homeSwatch, HOME_TILES);
+    paintTiles(ctx, foodScent, foodPeak, foodSwatch, FOOD_TILES);
+  }
 
-    const ctx = ensureGlow();
-    if (!ctx || !glow) return;
-    const data = glow.data;
-    const top = Math.log1p(peak) || 1;
-    const [fr, fg, fb] = palette.foodScent.split(",").map(Number) as [
-      number,
-      number,
-      number,
-    ];
-    const [hr, hg, hb] = palette.homeScent.split(",").map(Number) as [
-      number,
-      number,
-      number,
-    ];
-
-    for (let cell = 0; cell < cells; cell += 1) {
-      const at = cell * 4;
-      if (grid.open[cell] !== 1) {
-        data[at + 3] = 0;
-        continue;
-      }
-      // Gamma on top of the log. The log alone still leaves the road's own glow
-      // dim: with D = 20 the peak is far above everything, so mid-scent cells
-      // land near zero and the road reads as a line of ants on bare ground
-      // rather than as a road. 0.55 lifts the mid-tones without inventing scent
-      // where there is none — zero is still zero.
-      const f = Math.pow(Math.log1p(foodScent[cell] as number) / top, 0.55);
-      const h = Math.pow(Math.log1p(homeScent[cell] as number) / top, 0.55);
-      // The warm one is the road, so it wins where they overlap; the cool one is
-      // deliberately fainter, at a third of the alpha for the same strength.
-      const alpha = Math.min(1, f + h * 0.34);
-      if (alpha <= 0.002) {
-        data[at + 3] = 0;
-        continue;
-      }
-      const warm = f / (f + h * 0.34 || 1);
-      data[at] = Math.round(fr * warm + hr * (1 - warm));
-      data[at + 1] = Math.round(fg * warm + hg * (1 - warm));
-      data[at + 2] = Math.round(fb * warm + hb * (1 - warm));
-      data[at + 3] = Math.round(alpha * 235);
+  /** Ease every ant's drawn position toward the cell it is really in. */
+  function settleAnts(colony: Colony): void {
+    const count = colony.at.length;
+    const fresh = drawnFor !== colony || drawnX.length !== count;
+    if (fresh) {
+      drawnX = new Float32Array(count);
+      drawnY = new Float32Array(count);
+      drawnFor = colony;
     }
-    ctx.putImageData(glow, 0, 0);
+    for (let ant = 0; ant < count; ant += 1) {
+      const cell = grid.cellOf[colony.at[ant] as number] as number;
+      if (cell < 0) continue;
+      const tx = (cell % grid.columns) + 0.5 + jitter(ant, 0);
+      const ty = Math.floor(cell / grid.columns) + 0.5 + jitter(ant, 1);
+      const dx = tx - (drawnX[ant] as number);
+      const dy = ty - (drawnY[ant] as number);
+      if (fresh || Math.abs(dx) > SNAP || Math.abs(dy) > SNAP) {
+        drawnX[ant] = tx;
+        drawnY[ant] = ty;
+      } else {
+        drawnX[ant] = (drawnX[ant] as number) + dx * EASE;
+        drawnY[ant] = (drawnY[ant] as number) + dy * EASE;
+      }
+    }
   }
 
   function draw(colony: Colony): void {
     last = colony;
+    settleAnts(colony);
     const ctx = context();
     if (!ctx || width === 0 || height === 0) return;
 
@@ -273,20 +353,9 @@ export function createCanvasView(
     ctx.fillStyle = palette.ground;
     ctx.fillRect(0, 0, width, height);
 
-    paintScents(colony);
-    if (glowCanvas && scale > 0) {
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(
-        glowCanvas,
-        offsetX,
-        offsetY,
-        grid.columns * scale,
-        grid.rows * scale,
-      );
-    }
+    paintScents(ctx, colony);
 
-    // Walls and blocks, solid, over the glow — nothing seeps through them.
+    // Walls and blocks, solid, over the scent — nothing seeps through them.
     ctx.fillStyle = palette.blocked;
     for (let y = 0; y < grid.rows; y += 1) {
       let run = 0;
@@ -295,7 +364,8 @@ export function createCanvasView(
         const solid =
           x < grid.columns &&
           (grid.open[cell] !== 1 ||
-            (grid.gap[cell] === 1 && !colony.shortcutOpen));
+            (grid.gap[cell] === 1 && !colony.shortcutOpen) ||
+            colony.drawnWalls.has(`${x},${y}`));
         if (solid) {
           run += 1;
           continue;
@@ -322,7 +392,8 @@ export function createCanvasView(
           const cell = y * grid.columns + x;
           const solid =
             grid.open[cell] !== 1 ||
-            (grid.gap[cell] === 1 && !colony.shortcutOpen);
+            (grid.gap[cell] === 1 && !colony.shortcutOpen) ||
+            colony.drawnWalls.has(`${x},${y}`);
           if (!solid) continue;
           ctx.moveTo(px(x), py(y));
           ctx.lineTo(px(x + 1), py(y));
@@ -334,7 +405,8 @@ export function createCanvasView(
       ctx.restore();
     }
 
-    const disc = (cellFlags: Uint8Array, colour: string) => {
+    // The nest and the food: a disc the size of its 3×3 zone, named beneath it.
+    const disc = (cellFlags: Uint8Array, colour: string, name: string) => {
       let sumX = 0;
       let sumY = 0;
       let count = 0;
@@ -345,34 +417,43 @@ export function createCanvasView(
         count += 1;
       }
       if (count === 0) return;
+      const cx = px(sumX / count);
+      const cy = py(sumY / count);
       ctx.fillStyle = colour;
       ctx.beginPath();
-      ctx.arc(px(sumX / count), py(sumY / count), scale * 1.9, 0, Math.PI * 2);
+      ctx.arc(cx, cy, scale * 1.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = palette.ink;
+      ctx.font = `${Math.max(10, Math.round(scale * 0.75))}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText(name, cx, cy + scale * 1.8);
     };
-    disc(grid.nest, palette.nest);
-    disc(grid.food, palette.food);
+    disc(grid.nest, palette.nest, "nest");
+    disc(grid.food, palette.food, "food");
 
-    // The ants. A dot each, black, with a deterministic sub-cell offset so four
-    // hundred of them in a crowd read as a crowd rather than as one dot.
-    ctx.fillStyle = palette.ant;
+    // The ants. A small dot each; black while searching, red while carrying food
+    // — the one bit they hold, made visible. Two passes, so the fill style
+    // changes twice a frame rather than four hundred times.
+    //
     // Decision 22 (7): 4-5 px across at 1920, never under 2 px at 390. Fixed in
     // PIXELS, not in cells — proportional sizing gave 12 px blobs at 1920 and
     // the ants stopped reading as ants.
     const radius = Math.max(1.05, Math.min(2.5, scale * 0.3));
-    for (let ant = 0; ant < colony.at.length; ant += 1) {
-      const cell = grid.cellOf[colony.at[ant] as number] as number;
-      if (cell < 0) continue;
-      const jitterX = ((ant * 7) % 5) / 5 - 0.4;
-      const jitterY = ((ant * 11) % 5) / 5 - 0.4;
+    for (const [carrying, colour] of [
+      [0, palette.ant],
+      [1, palette.carrier],
+    ] as const) {
+      ctx.fillStyle = colour;
       ctx.beginPath();
-      ctx.arc(
-        px((cell % grid.columns) + 0.5 + jitterX * 0.6),
-        py(Math.floor(cell / grid.columns) + 0.5 + jitterY * 0.6),
-        radius,
-        0,
-        Math.PI * 2,
-      );
+      for (let ant = 0; ant < colony.at.length; ant += 1) {
+        if ((colony.carrying[ant] as number) !== carrying) continue;
+        if ((grid.cellOf[colony.at[ant] as number] as number) < 0) continue;
+        const x = px(drawnX[ant] as number);
+        const y = py(drawnY[ant] as number);
+        ctx.moveTo(x + radius, y);
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+      }
       ctx.fill();
     }
 
@@ -394,6 +475,24 @@ export function createCanvasView(
     );
     ctx.stroke();
     ctx.restore();
+    }
+
+    // The keyboard cursor, drawn last so nothing covers it. Only visible while
+    // the visitor is using the keyboard — a pointer user never sees it.
+    if (cursorAt) {
+      const spot = fixture.cells?.get(cursorAt);
+      if (spot) {
+        ctx.save();
+        ctx.strokeStyle = palette.gapRing;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+          px(spot[0]) + 1,
+          py(spot[1]) + 1,
+          Math.max(3, scale - 2),
+          Math.max(3, scale - 2),
+        );
+        ctx.restore();
+      }
     }
 
     ctx.restore();
@@ -420,6 +519,19 @@ export function createCanvasView(
     draw,
     resize: onWindowResize,
     size: () => ({ width, height }),
+    cellAt(clientX, clientY) {
+      if (scale <= 0) return null;
+      const box = canvas.getBoundingClientRect();
+      const x = Math.floor((clientX - box.left - offsetX) / scale);
+      const y = Math.floor((clientY - box.top - offsetY) / scale);
+      if (x < 0 || y < 0 || x >= grid.columns || y >= grid.rows) return null;
+      return `${x},${y}`;
+    },
+    setCursor(node) {
+      cursorAt = node;
+      if (last) draw(last);
+    },
+    cursor: () => cursorAt,
     hitsGap(clientX, clientY) {
       if (!grid.hasGap) return false;
       const box = canvas.getBoundingClientRect();

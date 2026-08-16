@@ -65,7 +65,7 @@ describe("the field fixture carries everything the renderer needs", () => {
     // Blocked cells are absent from the graph entirely — the renderer infers a
     // block from what is missing, so it cannot draw ground the ants cannot walk
     // on, or leave out ground they can.
-    expect(FIELD_V4.cells?.has("17,19")).toBe(false);
+    expect(FIELD_V4.cells?.has("10,34")).toBe(false);
     expect(FIELD_V4.cells?.get("6,20")).toEqual([6, 20]);
   });
 
