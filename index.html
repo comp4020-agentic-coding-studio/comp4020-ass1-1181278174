@@ -17,31 +17,52 @@
     </header>
 
     <main>
-      <!-- Slice 3 renders the argument. The prose (slice 5) and the remaining
-           controls (slice 4) are not here yet; the wall is the only verb. -->
+      <!-- The canvas is a picture, not a control: role="img", not focusable.
+           The one verb has a real button in the controls (Decision 15), and
+           tapping the highlighted wall does the same thing. -->
       <canvas
         id="stage"
-        tabindex="0"
-        role="button"
-        aria-pressed="false"
-        aria-label="The double bridge. Tap the barrier on the lower route to open or close the shortcut."
-      >
-        Ants moving between a nest and a food source along two routes, with the
-        trail they leave drawn on the paths they use.
-      </canvas>
+        role="img"
+        aria-label="A nest and a food source joined by two routes: a long one arcing over the top, and a short direct one below that is blocked by a barrier. Ants move along the routes, and the trail they leave is drawn on the paths they use."
+      ></canvas>
 
+      <!-- One column beside the canvas at desktop, the next block in the stack at
+           390 — either way, reading → strip → controls (Decision 14). -->
+      <div class="side">
       <section id="reading" class="readout">
         <p id="readout" class="number" aria-live="polite">no reading yet</p>
         <p id="readout-note" class="note">warming up</p>
         <canvas
           id="strip"
           class="strip"
+          role="img"
           aria-label="How the reading has moved over time, with the moment the shortcut opened marked."
         ></canvas>
       </section>
 
-      <!-- Reserved for slice 4: forgetting rate, run/pause, reset. -->
-      <div class="controls" aria-hidden="true"></div>
+      <section class="controls" aria-label="Controls">
+        <button id="wall" type="button" aria-pressed="false">
+          Open the shortcut
+        </button>
+
+        <div class="slider">
+          <label for="rho">Forgetting rate — <b id="rho-value">0.12</b></label>
+          <input id="rho" type="range" min="0" max="0.25" step="0.01" value="0.12" />
+          <div class="ends" aria-hidden="true">
+            <span>never forget</span><span>forget everything</span>
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button id="run" type="button" aria-pressed="false">Pause</button>
+          <button id="reset" type="button">Reset</button>
+          <button id="grow" type="button" hidden>Watch it grow</button>
+        </div>
+      </section>
+      </div>
+
+      <!-- Slice 5 fills this: eight sentences, ≤ 65ch (Decision 14). -->
+      <div class="prose"></div>
     </main>
 
     <script type="module" src="./main.ts"></script>

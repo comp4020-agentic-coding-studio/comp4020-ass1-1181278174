@@ -620,9 +620,64 @@ respect but the ink. Director text, verbatim:
 `docs/screenshots/` — the rejected one is part of the record, as the rejected
 engine models are earlier in this file.
 
+### Decision 14 — layout, and the strip before the tap
+
+Director text, verbatim:
+
+> leave the strip flat until the tap; desktop layout = canvas left 2/3, right
+> column top-down: reading → strip → controls; the eight sentences go under the
+> canvas in a ≤ 65ch column (slice 5); at 390 that is the natural stack canvas →
+> reading → strip → controls → prose.
+
+The flat line is not a bug to design around: before the shortcut opens the colony
+is on the only road there is, the reading sits at ≈ 1.07× against a band that
+runs to 2.1×, and **a line pinned to the baseline is a true statement that
+nothing is happening yet.** The tap is what makes the strip worth looking at, and
+it should be.
+
+### Decision 15 — the keyboard path for the one verb
+
+Two options were built as mock-ups and the director picked. Director's selection,
+from agent-drafted options (so the *choice* is the director's and the option
+wording is the agent's):
+
+> Visible button
+
+A native `<button aria-pressed>` labelled *"Open the shortcut" / "Close the
+shortcut"* sits in the controls and calls the same `toggleShortcut` the canvas tap
+does. The rejected option — `tabindex="0"` + `role="button"` + Enter/Space on the
+canvas itself, which is what slice 3 shipped — was dropped because `role="button"`
+on a canvas containing a whole graph is a lie to a screen reader, `aria-pressed`
+belongs on a real button, and there is no way to move focus to a *segment*. The
+canvas keeps `role="img"` and its `aria-label`; it is a picture, and the verb has
+a control.
+
+Accepted cost: the button telegraphs the interaction, so there is less of a
+discovery moment. Discoverability was judged the larger risk — a visitor with no
+background has to find the verb for beats 2 and 3 to happen at all.
+
+### The keyboard map
+
+Every pointer action has a keyboard path, and no path exists that the pointer
+cannot also reach. Tab order is DOM order at both viewports, which is the reading
+order at both (Decision 14).
+
+| Target | Key | What it does |
+|---|---|---|
+| skip link | `Tab` (first), `Enter` | jumps to the simulation |
+| nav links | `Tab`, `Enter` | in-page anchors |
+| *(canvas)* | — | `role="img"`, not focusable: it is a picture, not a control |
+| **Open / close the shortcut** | `Tab`, `Enter` / `Space` | the one verb — same `toggleShortcut` as tapping the wall |
+| **forgetting rate** | `Tab`, `←` `→` `Home` `End` | native `<input type=range>`, step 0.01 over 0.00–0.25 |
+| **Pause / Run** | `Tab`, `Enter` / `Space` | visible at all times (WCAG 2.2.2) |
+| **Reset** | `Tab`, `Enter` / `Space` | back to zero pheromone, wall shut |
+| **Watch it grow** | `Tab`, `Enter` / `Space` | only under `prefers-reduced-motion`, where nothing autoplays |
+
+Focus is visible on every one of them (`:focus-visible`, 2px outline, offset).
+
 ## Open decisions
 
-**None.** Decisions 1–13 are settled, 9 and 10 dissolved. Beat 4's fixture source is
+**None.** Decisions 1–15 are settled, 9 and 10 dissolved. Beat 4's fixture source is
 deferred to slice 8 as a condition, not an open question.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its

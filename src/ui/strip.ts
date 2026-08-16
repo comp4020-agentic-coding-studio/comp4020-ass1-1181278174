@@ -84,19 +84,22 @@ export function createStripView(
     const x = (i: number) => (i / span) * width;
 
     if (opened !== null) {
+      // The toggle happens BETWEEN samples, so `opened` can be one past the last
+      // index — which drew the tick, and its label, off the right-hand edge.
+      const at = x(Math.min(opened, series.length - 1));
       ctx.save();
       ctx.strokeStyle = palette.tick;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
-      ctx.moveTo(x(opened), 0);
-      ctx.lineTo(x(opened), height);
+      ctx.moveTo(at, 0);
+      ctx.lineTo(at, height);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = palette.tick;
       const label = "shortcut opened";
-      const right = x(opened) + 5 + ctx.measureText(label).width > width;
+      const right = at + 5 + ctx.measureText(label).width > width;
       ctx.textAlign = right ? "right" : "left";
-      ctx.fillText(label, x(opened) + (right ? -5 : 5), 12);
+      ctx.fillText(label, at + (right ? -5 : 5), 12);
       ctx.restore();
     }
 

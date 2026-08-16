@@ -1,7 +1,11 @@
 /* Mobile first. The canvas is the hero; everything else gets out of its way.
-   Dark, per Decision 13 — the light direction and the `?scheme=` switch that
-   let the two be compared are gone; both screenshots stay in docs/screenshots.
-   These values mirror src/ui/palette.ts, which the canvas draws from. */
+   Dark, per Decision 13 — these values mirror src/ui/palette.ts, which the canvas
+   draws from.
+
+   Layout, per Decision 14: at 390 the natural stack, canvas → reading → strip →
+   controls → prose. At desktop the canvas takes the left two-thirds and the right
+   column runs reading → strip → controls top-down, with the prose under the
+   canvas in a ≤ 65ch column. */
 
 :root {
   --ground: #0f1216;
@@ -9,6 +13,7 @@
   --ink: #eceae5;
   --muted: #8a93a3;
   --edge: #232a34;
+  --raised: #1a1f27;
   --focus: #6fd3c7;
 
   color-scheme: dark;
@@ -20,7 +25,7 @@
 
 body {
   margin: 0;
-  padding: 16px 16px 0;
+  padding: 16px 16px 40px;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1.5;
   color: var(--ink);
@@ -63,6 +68,12 @@ main {
   gap: 14px;
 }
 
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 /* The canvas sizes itself from the box, and the view redraws — never rescales —
    so a resize mid-interaction cannot disturb the simulation. */
 #stage {
@@ -74,11 +85,6 @@ main {
   border-radius: 6px;
   touch-action: none;
   cursor: pointer;
-}
-
-#stage:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
 }
 
 .readout {
@@ -111,14 +117,74 @@ main {
   border-radius: 4px;
 }
 
-/* Slice 4 fills this. Reserved now so the layout does not jump when it lands. */
 .controls {
-  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+
+button {
+  padding: 10px 14px;
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--muted);
+}
+
+button[aria-pressed="true"] {
+  border-color: var(--focus);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slider label {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.slider b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+#rho {
+  width: 100%;
+  margin: 6px 0 2px;
+  accent-color: var(--focus);
+}
+
+.ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.prose {
+  max-width: 65ch;
+}
+
+:is(a, button, input, canvas):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 @media (width >= 900px) {
   body {
-    padding: 28px 32px 0;
+    padding: 28px 32px 56px;
   }
 
   h1 {
@@ -129,15 +195,25 @@ main {
 
   main {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 32px;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    gap: 20px 32px;
     align-items: start;
     max-width: 1500px;
     margin: 0 auto;
   }
 
   #stage {
+    grid-column: 1;
+    grid-row: 1;
     aspect-ratio: 16 / 9;
+  }
+
+  /* Right column, top-down: reading → strip → controls (Decision 14). One
+     column, not two grid rows aligned to the canvas — that left the controls
+     stranded 200px below the strip. */
+  .side {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .readout {
@@ -148,14 +224,22 @@ main {
     font-size: 3.5rem;
   }
 
-  .controls {
-    grid-column: 2;
+  .strip {
+    height: 110px;
+  }
+
+  .prose {
+    grid-column: 1;
+    grid-row: 2;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

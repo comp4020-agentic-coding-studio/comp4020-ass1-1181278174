@@ -31,6 +31,19 @@ const VIEWPORTS = [
   { name: "390", width: 390, height: 844 },
 ] as const;
 
+// A still cannot tap, so the page's `?steps=&open&rho=` prime is how a screenshot
+// reaches a state the visitor reaches by hand. Every one of these is a state the
+// controls produce; nothing here is reachable only from a URL.
+const STATES = [
+  { suffix: "", query: "" },
+  // The tap, at the default rate: the tick lands on the strip, the reading jumps
+  // to the new BFS, then comes down as the colony finds the shortcut.
+  { suffix: "-opened", query: "?steps=2000&open&after=4000&rho=0.12" },
+  // The slider at zero, same tap: the jump happens and nothing comes down. This
+  // is beat 3 — the shortcut is open, in plain sight, and they will not take it.
+  { suffix: "-locked", query: "?steps=2000&open&after=4000&rho=0" },
+] as const;
+
 function binary(): string {
   const found = globSync(
     join(
@@ -130,22 +143,24 @@ async function main(): Promise<void> {
     await sleep(2500);
     for (const viewport of VIEWPORTS) {
       await verifyViewport(viewport.width, viewport.height);
-      const path = `${OUT}/${stamp}-page-${viewport.name}.png`;
-      await run([
-        "--headless",
-        "--no-sandbox",
-        "--disable-gpu",
-        "--hide-scrollbars",
-        `--window-size=${viewport.width},${viewport.height}`,
-        // Long enough for a trail to form: the page runs 90 steps/s and the
-        // reading needs MIN_TRIPS completed trips before it is a number at all.
-        "--virtual-time-budget=25000",
-        `--screenshot=${path}`,
-        `${BASE}/`,
-      ]);
-      console.log(
-        `${path}  ${viewport.width}x${viewport.height} CSS px (verified)`,
-      );
+      for (const state of STATES) {
+        const path = `${OUT}/${stamp}-page-${viewport.name}${state.suffix}.png`;
+        await run([
+          "--headless",
+          "--no-sandbox",
+          "--disable-gpu",
+          "--hide-scrollbars",
+          `--window-size=${viewport.width},${viewport.height}`,
+          // Long enough for a trail to form: the page runs 90 steps/s and the
+          // reading needs MIN_TRIPS completed trips before it is a number at all.
+          "--virtual-time-budget=30000",
+          `--screenshot=${path}`,
+          `${BASE}/${state.query}`,
+        ]);
+        console.log(
+          `${path}  ${viewport.width}x${viewport.height} CSS px (verified)`,
+        );
+      }
     }
   } finally {
     preview.kill();
