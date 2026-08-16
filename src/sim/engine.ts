@@ -12,7 +12,8 @@
 // encode distance to food, or beat 1's sentence ("no ant knows the map") is false".
 
 import type { Fixture, NodeId } from "../fixtures/double-bridge.ts";
-import { induce } from "../fixtures/graph.ts";
+import { adjacencyOf } from "../fixtures/graph.ts";
+import type { Hop } from "../fixtures/graph.ts";
 import { ENGINE_PARAMS } from "./params.ts";
 import { mulberry32 } from "./prng.ts";
 
@@ -23,20 +24,81 @@ export interface ColonyOptions {
   readonly ants?: number;
 }
 
-interface Step {
-  readonly edge: number;
-  readonly to: number;
+/** Re-exported so a policy can name what it is weighing. */
+export type Step = Hop;
+
+/**
+ * The rules, as data. Injected rather than hard-coded so the negative controls can
+ * be alternative POLICIES instead of restated step loops — a mutant that copies the
+ * loop drifts from the engine and quietly stops being a control.
+ *
+ * This is dependency injection, not a "be wrong" switch: nothing in shipping code
+ * selects a policy, and `DEFAULT_POLICY` is the only one `src/` contains.
+ */
+export interface Policy {
+  readonly name: string;
+  /** Which map the ant reads, and which it writes, given its one bit. */
+  maps(
+    colony: Colony,
+    carrying: boolean,
+  ): { readonly steer: Float64Array; readonly lay: Float64Array };
+  /** Weight of one candidate edge. In DEFAULT_POLICY this may not read the goal. */
+  weight(
+    colony: Colony,
+    steer: Float64Array,
+    choice: Step,
+    carrying: boolean,
+  ): number;
+  /** Lay pheromone for the crossing just made. */
+  deposit(
+    colony: Colony,
+    lay: Float64Array,
+    edge: number,
+    carrying: boolean,
+  ): void;
+  /** Once per step, after every ant has moved. */
+  evaporate(colony: Colony): void;
 }
+
+/** Model 1, deposit mode 1b: the rules described at the top of this file. */
+export const DEFAULT_POLICY: Policy = {
+  name: "1b",
+
+  maps: (colony, carrying) =>
+    carrying
+      ? { steer: colony.home, lay: colony.foodTrail }
+      : { steer: colony.foodTrail, lay: colony.home },
+
+  // P ∝ (k + τ + floor)^h. τ is the only term, and it is local to the edge — no
+  // distance, no goal, no map.
+  weight: (colony, steer, choice) => {
+    const { h, k, floor } = colony.fixture.params;
+    return Math.pow(k + (steer[choice.edge] as number) + floor, h);
+  },
+
+  deposit: (_colony, lay, edge) => {
+    lay[edge] = (lay[edge] as number) + ENGINE_PARAMS.depositPerStep;
+  },
+
+  evaporate: (colony) => {
+    const keep = 1 - colony.rho;
+    for (let e = 0; e < colony.home.length; e += 1) {
+      colony.home[e] = (colony.home[e] as number) * keep;
+      colony.foodTrail[e] = (colony.foodTrail[e] as number) * keep;
+    }
+  },
+};
 
 export interface Colony {
   readonly fixture: Fixture;
+  readonly policy: Policy;
   readonly rho: number;
   readonly nest: number;
   readonly food: number;
   /** Endpoint indices per edge, in fixture.edges order — never re-ordered. */
   readonly ends: readonly (readonly [number, number])[];
   /** Rebuilt on toggle; edge indices stay stable so pheromone survives. */
-  adjacency: readonly (readonly Step[])[];
+  adjacency: readonly (readonly Hop[])[];
   shortcutOpen: boolean;
   readonly home: Float64Array;
   readonly foodTrail: Float64Array;
@@ -49,34 +111,18 @@ export interface Colony {
   steps: number;
 }
 
-function buildAdjacency(
+export function createColony(
   fixture: Fixture,
-  index: ReadonlyMap<NodeId, number>,
-  openShortcut: boolean,
-): readonly (readonly Step[])[] {
-  const open = new Set(
-    induce(fixture, { openShortcut }).openEdges.map((edge) =>
-      fixture.edges.indexOf(edge),
-    ),
-  );
-  const lists: Step[][] = fixture.nodes.map(() => []);
-  fixture.edges.forEach((edge, e) => {
-    if (!open.has(e)) return;
-    const a = index.get(edge.a) as number;
-    const b = index.get(edge.b) as number;
-    lists[a]?.push({ edge: e, to: b });
-    lists[b]?.push({ edge: e, to: a });
-  });
-  return lists;
-}
-
-export function createColony(fixture: Fixture, options: ColonyOptions): Colony {
+  options: ColonyOptions,
+  policy: Policy = DEFAULT_POLICY,
+): Colony {
   const index = new Map(fixture.nodes.map((node, i) => [node, i]));
   const ants = options.ants ?? ENGINE_PARAMS.ants;
   const nest = index.get(fixture.nest) as number;
 
   return {
     fixture,
+    policy,
     rho: options.rho,
     nest,
     food: index.get(fixture.food) as number,
@@ -84,7 +130,7 @@ export function createColony(fixture: Fixture, options: ColonyOptions): Colony {
       (edge) =>
         [index.get(edge.a) as number, index.get(edge.b) as number] as const,
     ),
-    adjacency: buildAdjacency(fixture, index, false),
+    adjacency: adjacencyOf(fixture, index, false),
     shortcutOpen: false,
     home: new Float64Array(fixture.edges.length),
     foodTrail: new Float64Array(fixture.edges.length),
@@ -96,14 +142,6 @@ export function createColony(fixture: Fixture, options: ColonyOptions): Colony {
     random: mulberry32(options.seed),
     steps: 0,
   };
-}
-
-/** P ∝ (k + τ + floor)^h over the open edges, τ from the map the ant steers by. */
-function weigh(colony: Colony, steer: Float64Array, choices: readonly Step[]) {
-  const { h, k, floor } = colony.fixture.params;
-  return choices.map((choice) =>
-    Math.pow(k + (steer[choice.edge] as number) + floor, h),
-  );
 }
 
 function choose(colony: Colony, weights: readonly number[]): number {
@@ -118,10 +156,10 @@ function choose(colony: Colony, weights: readonly number[]): number {
 }
 
 export function step(colony: Colony): void {
+  const { policy } = colony;
   for (let ant = 0; ant < colony.at.length; ant += 1) {
     const carrying = colony.carrying[ant] === 1;
-    const steer = carrying ? colony.home : colony.foodTrail;
-    const lay = carrying ? colony.foodTrail : colony.home;
+    const { steer, lay } = policy.maps(colony, carrying);
     const here = colony.at[ant] as number;
     const all = colony.adjacency[here] ?? [];
 
@@ -131,8 +169,11 @@ export function step(colony: Colony): void {
     const choices = open.length > 0 ? open : all;
     if (choices.length === 0) continue;
 
-    const taken = choices[choose(colony, weigh(colony, steer, choices))] as Step;
-    lay[taken.edge] = (lay[taken.edge] as number) + ENGINE_PARAMS.depositPerStep;
+    const weights = choices.map((choice) =>
+      policy.weight(colony, steer, choice, carrying),
+    );
+    const taken = choices[choose(colony, weights)] as Step;
+    policy.deposit(colony, lay, taken.edge, carrying);
     colony.at[ant] = taken.to;
     colony.lastEdge[ant] = taken.edge;
     if (carrying) colony.tripSteps[ant] = (colony.tripSteps[ant] as number) + 1;
@@ -149,22 +190,14 @@ export function step(colony: Colony): void {
     }
   }
 
-  const keep = 1 - colony.rho;
-  for (let e = 0; e < colony.home.length; e += 1) {
-    colony.home[e] = (colony.home[e] as number) * keep;
-    colony.foodTrail[e] = (colony.foodTrail[e] as number) * keep;
-  }
+  policy.evaporate(colony);
   colony.steps += 1;
 }
 
 export function toggleShortcut(colony: Colony): void {
   const index = new Map(colony.fixture.nodes.map((node, i) => [node, i]));
   colony.shortcutOpen = !colony.shortcutOpen;
-  colony.adjacency = buildAdjacency(
-    colony.fixture,
-    index,
-    colony.shortcutOpen,
-  );
+  colony.adjacency = adjacencyOf(colony.fixture, index, colony.shortcutOpen);
 }
 
 export function antCount(colony: Colony): number {
@@ -219,7 +252,11 @@ export function choiceDistribution(
 ): ReadonlyMap<string, number> {
   const here = colony.fixture.nodes.indexOf(node);
   const choices = colony.adjacency[here] ?? [];
-  const weights = weigh(colony, colony.foodTrail, choices);
+  // Through the policy, so a policy that cheats is visible to the honesty test.
+  const { steer } = colony.policy.maps(colony, false);
+  const weights = choices.map((choice) =>
+    colony.policy.weight(colony, steer, choice, false),
+  );
   const total = weights.reduce((sum, weight) => sum + weight, 0);
   const out = new Map<string, number>();
   choices.forEach((choice, i) => {
