@@ -93,6 +93,10 @@ function tripSeries(settle: number, seed: number): number[][] {
   const colony = realEngine.createColony(fixture, {
     rho: RHOS.switching,
     seed,
+    // The whole history (Decision 12): this sweep compares windows from 50 to
+    // 500 and walks the first 200 trips for MIN_TRIPS. Run inside a buffer sized
+    // by N_trips it would be assuming the answer it is here to derive.
+    tripHistory: Infinity,
   });
   for (let i = 0; i < settle; i += 1) realEngine.step(colony);
   realEngine.toggleShortcut(colony);

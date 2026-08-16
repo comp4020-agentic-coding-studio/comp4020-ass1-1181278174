@@ -582,9 +582,47 @@ Two consequences, and they are the point of having measured it:
   happening; it just never picks a side. Writing "nothing forms" would have been a
   sentence the simulation contradicts.
 
+### Decision 12 — trip history, the trace's denominator, and where the engine runs
+
+Three rulings at the close of slice 2, all director text, quoted verbatim:
+
+> (1) colony.trips → ring buffer of capacity N_trips (300) plus a total counter
+> for display; completedTripLengths returns the buffered window; the reading and
+> all tests unchanged in meaning — prove with byte-identical derivation output.
+> (2) The trace keeps the current BFS as denominator; the discontinuity at the
+> toggle is the point (the colony is suddenly 2× worse than possible) — label the
+> tick "shortcut opened".
+> (3) Where the engine runs: MAIN THREAD, fixed-step accumulator decoupled from
+> rAF; a Worker buys nothing at 12 edges × 64 ants and puts a message boundary
+> between the tests and the page.
+
+(1) came from a reading of the dev canvas rather than from a check: 24,614 trips
+retained after 5,000 steps, on a page that runs forever. **The capacity cannot be
+sized by `N_trips` during the derivation that chooses `N_trips`** — that sweep
+compares windows from 50 to 500, so `scripts/derive.ts` opts out via
+`tripHistory: Infinity` and studies the whole history. Everywhere else the
+capacity *is* `N_trips`, and `spec/engine-invariants.test.ts` asserts the two
+numbers are equal so they cannot drift apart.
+
+(3) settles the slice-3 question `CLAUDE.md` left open ("where it runs in the page
+is a slice-3 decision, two options with trade-offs, mine to make"). The engine
+stays `requestAnimationFrame`-free: the frame clock drives an accumulator, the
+accumulator drives whole fixed steps, and `step()` still never renders.
+
+### Decision 13 — the visual direction
+
+Two directions were built and screenshotted at both widths, identical in every
+respect but the ink. Director text, verbatim:
+
+> Visual direction: DARK. Drop the light palette and the ?scheme= param.
+
+`src/ui/palette.ts` now holds one palette. Both screenshots stay in
+`docs/screenshots/` — the rejected one is part of the record, as the rejected
+engine models are earlier in this file.
+
 ## Open decisions
 
-**None.** Decisions 1–11 are settled, 9 and 10 dissolved. Beat 4's fixture source is
+**None.** Decisions 1–13 are settled, 9 and 10 dissolved. Beat 4's fixture source is
 deferred to slice 8 as a condition, not an open question.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its

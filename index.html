@@ -3,22 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>COMP4020 prototype</title>
+    <title>The colony's intelligence is in how fast it forgets</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <a class="skip" href="#stage">Skip to the simulation</a>
     <header>
       <nav aria-label="Primary">
-        <a href="./">Home</a>
+        <a href="#stage">Try it</a>
+        <a href="#reading">Reading</a>
       </nav>
+      <h1>The colony's intelligence is in how fast it forgets</h1>
     </header>
+
     <main>
-      <h1>COMP4020 prototype</h1>
-      <p data-testid="intro">
-        Replace this with your prototype. This week's brief is on the course website;
-        <code>spec/README.md</code> explains how the checks in this repo relate to it.
-      </p>
+      <!-- Slice 3 renders the argument. The prose (slice 5) and the remaining
+           controls (slice 4) are not here yet; the wall is the only verb. -->
+      <canvas
+        id="stage"
+        tabindex="0"
+        role="button"
+        aria-pressed="false"
+        aria-label="The double bridge. Tap the barrier on the lower route to open or close the shortcut."
+      >
+        Ants moving between a nest and a food source along two routes, with the
+        trail they leave drawn on the paths they use.
+      </canvas>
+
+      <section id="reading" class="readout">
+        <p id="readout" class="number" aria-live="polite">no reading yet</p>
+        <p id="readout-note" class="note">warming up</p>
+        <canvas
+          id="strip"
+          class="strip"
+          aria-label="How the reading has moved over time, with the moment the shortcut opened marked."
+        ></canvas>
+      </section>
+
+      <!-- Reserved for slice 4: forgetting rate, run/pause, reset. -->
+      <div class="controls" aria-hidden="true"></div>
     </main>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

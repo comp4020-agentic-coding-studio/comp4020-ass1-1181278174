@@ -32,6 +32,26 @@ export const RHO = { locked: 0, default: 0.12, max: 0.25 } as const;
 export const SAMPLE = 250;
 
 /**
+ * How many completed trips a colony keeps (Decision 12). The reading never looks
+ * further back than `N_trips`, and the page runs forever — 24,614 trips were
+ * being retained after 5,000 steps before this existed.
+ *
+ * It must equal `N_trips`; `spec/engine-invariants.test.ts` asserts that, because
+ * the engine cannot import a harness threshold and a second copy of a number is a
+ * place for it to be wrong. `scripts/derive.ts` opts out with `Infinity`, since
+ * the sweep that *chooses* `N_trips` compares windows up to 500 and cannot be run
+ * inside a buffer sized by its own answer.
+ */
+export const TRIP_HISTORY = 300;
+
+/**
+ * Completed trips below which the page says "no reading yet" rather than a
+ * number. Same arrangement as `TRIP_HISTORY`: it must equal the derived
+ * `MIN_TRIPS`, and `spec/engine-invariants.test.ts` asserts it does.
+ */
+export const MIN_TRIPS = 65;
+
+/**
  * Steps a run is observed for after the shortcut opens. `N` (6000) equals this
  * because `N` was derived as "the whole window held, no decay seen to measure",
  * not because they mean the same thing: `N` is behaviour (2)'s bound, this is

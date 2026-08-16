@@ -17,6 +17,8 @@
 // Pure. Takes the BFS length as an argument, so the engine never contains a
 // shortest-path algorithm.
 
+import { MIN_TRIPS, TRIP_HISTORY } from "./rho.ts";
+
 export interface Reading {
   readonly status: "no reading yet" | "ok";
   readonly ratio: number | null;
@@ -28,6 +30,18 @@ export interface ReadingOptions {
   /** Below this many completed trips there is no reading, only a warm-up. */
   readonly minTrips: number;
 }
+
+/**
+ * The window the page reads over. The harness has its own copy in
+ * `spec/thresholds.ts` — that one is authoritative, this one is what ships, and
+ * `spec/engine-invariants.test.ts` asserts they are the same numbers. Shipping
+ * code cannot import a threshold from `spec/`, and a page that read a different
+ * window from the tests would be showing a number nothing checks.
+ */
+export const READING_WINDOW: ReadingOptions = {
+  window: TRIP_HISTORY,
+  minTrips: MIN_TRIPS,
+};
 
 export function mean(values: readonly number[]): number {
   if (values.length === 0) return Number.NaN;

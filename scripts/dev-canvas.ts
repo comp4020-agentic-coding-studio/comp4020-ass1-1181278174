@@ -27,6 +27,7 @@ import type { Colony } from "../src/sim/engine.ts";
 import type { Reading } from "../src/sim/reading.ts";
 import { reading } from "../src/sim/reading.ts";
 import { RHO, SAMPLE } from "../src/sim/rho.ts";
+import { project } from "../src/ui/projection.ts";
 import { derived } from "../spec/thresholds.ts";
 
 const FIXTURE = DOUBLE_BRIDGE;
@@ -36,38 +37,16 @@ const WINDOW = {
 };
 const STEPS_PER_FRAME = 8;
 
-// --- layout: dev-only, hand-placed ----------------------------------------
-// The fixture carries no coordinates on purpose — it is a logical graph. These
-// positions are this sensor's own projection: nest left, food right, the long
-// branch arcing over and the short branch under, so "twice as long" is visible
-// as distance rather than as a number.
+// --- layout ---------------------------------------------------------------
+// The projection is the page's own (src/ui/projection.ts, slice 3). This sensor
+// had its own copy while the page had none; keeping it would mean looking at a
+// picture the page does not draw.
 
-const LAYOUT = new Map<NodeId, readonly [number, number]>();
-{
-  const arc = (
-    branch: readonly NodeId[],
-    lift: number,
-  ): void => {
-    const spans = branch.length - 1;
-    branch.forEach((node, i) => {
-      const t = i / spans;
-      LAYOUT.set(node, [
-        0.06 + t * 0.88,
-        0.5 - lift * Math.sin(Math.PI * t),
-      ]);
-    });
-  };
-  // Both branches join the same two points, so screen distance cannot show "half
-  // as long" on its own — arc height is the only lever. The long way bulges, the
-  // short way runs nearly straight.
-  arc(FIXTURE.branches.long, 0.34);
-  arc(FIXTURE.branches.short, -0.14);
-  // Both arcs write NEST and FOOD; the last write wins and both agree on y=0.5.
-}
+const LAYOUT = project(FIXTURE).nodes;
 
 const at = (node: NodeId, w: number, h: number): readonly [number, number] => {
-  const p = LAYOUT.get(node) ?? [0.5, 0.5];
-  return [p[0] * w, p[1] * h];
+  const p = LAYOUT.get(node) ?? { x: 0.5, y: 0.5 };
+  return [p.x * w, p.y * h];
 };
 
 // --- state ----------------------------------------------------------------

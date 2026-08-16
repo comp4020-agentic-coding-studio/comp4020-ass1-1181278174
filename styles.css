@@ -1,16 +1,161 @@
+/* Mobile first. The canvas is the hero; everything else gets out of its way.
+   Dark, per Decision 13 — the light direction and the `?scheme=` switch that
+   let the two be compared are gone; both screenshots stay in docs/screenshots.
+   These values mirror src/ui/palette.ts, which the canvas draws from. */
+
+:root {
+  --ground: #0f1216;
+  --page: #0b0d10;
+  --ink: #eceae5;
+  --muted: #8a93a3;
+  --edge: #232a34;
+  --focus: #6fd3c7;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  padding: 2rem;
-  font-family: system-ui, sans-serif;
-  line-height: 1.6;
-  color: #1a1a1a;
+  padding: 16px 16px 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--page);
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+}
+
+.skip:focus {
+  position: static;
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--focus);
+}
+
+nav {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8125rem;
+}
+
+nav a {
+  color: var(--muted);
+}
+
+h1 {
+  margin: 10px 0 14px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 main {
-  max-width: 40rem;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-a {
-  color: #0b5fff;
+/* The canvas sizes itself from the box, and the view redraws — never rescales —
+   so a resize mid-interaction cannot disturb the simulation. */
+#stage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--ground);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  touch-action: none;
+  cursor: pointer;
+}
+
+#stage:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.number {
+  margin: 0;
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.note {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.strip {
+  display: block;
+  width: 100%;
+  height: 84px;
+  background: var(--ground);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+}
+
+/* Slice 4 fills this. Reserved now so the layout does not jump when it lands. */
+.controls {
+  min-height: 96px;
+}
+
+@media (width >= 900px) {
+  body {
+    padding: 28px 32px 0;
+  }
+
+  h1 {
+    max-width: 26ch;
+    margin: 14px 0 22px;
+    font-size: 1.75rem;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 32px;
+    align-items: start;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+
+  #stage {
+    aspect-ratio: 16 / 9;
+  }
+
+  .readout {
+    gap: 4px;
+  }
+
+  .number {
+    font-size: 3.5rem;
+  }
+
+  .controls {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

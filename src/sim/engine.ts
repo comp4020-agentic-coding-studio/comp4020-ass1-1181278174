@@ -16,12 +16,20 @@ import { adjacencyOf } from "../fixtures/graph.ts";
 import type { Hop } from "../fixtures/graph.ts";
 import { ENGINE_PARAMS } from "./params.ts";
 import { mulberry32 } from "./prng.ts";
+import { TRIP_HISTORY } from "./rho.ts";
 
 export interface ColonyOptions {
   /** Forgetting rate. 0 = never forgets; the slider's own parameter. */
   readonly rho: number;
   readonly seed: number;
   readonly ants?: number;
+  /**
+   * Completed trips retained (Decision 12). Defaults to `TRIP_HISTORY`, which is
+   * `N_trips` — the reading never looks further back. `Infinity` keeps the whole
+   * history, which only the derivation needs: the sweep that chooses `N_trips`
+   * cannot run inside a buffer sized by its own answer.
+   */
+  readonly tripHistory?: number;
 }
 
 /** Re-exported so a policy can name what it is weighing. */
@@ -106,7 +114,17 @@ export interface Colony {
   readonly carrying: Uint8Array;
   readonly lastEdge: Int32Array;
   readonly tripSteps: Int32Array;
+  /**
+   * Ring storage for completed trip lengths, capacity `tripHistory`. Not in
+   * arrival order once it wraps — read it through `completedTripLengths()`,
+   * which unwraps it oldest-first.
+   */
   readonly trips: number[];
+  readonly tripHistory: number;
+  /** Where the next completed trip is written once the ring is full. */
+  tripHead: number;
+  /** Every trip ever completed, for the readout. Not capped, never read back. */
+  tripsCompleted: number;
   readonly random: () => number;
   steps: number;
 }
@@ -139,9 +157,22 @@ export function createColony(
     lastEdge: new Int32Array(ants).fill(-1),
     tripSteps: new Int32Array(ants),
     trips: [],
+    tripHistory: options.tripHistory ?? TRIP_HISTORY,
+    tripHead: 0,
+    tripsCompleted: 0,
     random: mulberry32(options.seed),
     steps: 0,
   };
+}
+
+/** Record one completed food→nest trip, evicting the oldest once the ring is full. */
+function recordTrip(colony: Colony, moves: number): void {
+  if (colony.trips.length < colony.tripHistory) colony.trips.push(moves);
+  else {
+    colony.trips[colony.tripHead] = moves;
+    colony.tripHead = (colony.tripHead + 1) % colony.tripHistory;
+  }
+  colony.tripsCompleted += 1;
 }
 
 function choose(colony: Colony, weights: readonly number[]): number {
@@ -184,7 +215,7 @@ export function step(colony: Colony): void {
       colony.lastEdge[ant] = -1;
     } else if (taken.to === colony.nest && carrying) {
       colony.carrying[ant] = 0;
-      colony.trips.push(colony.tripSteps[ant] as number);
+      recordTrip(colony, colony.tripSteps[ant] as number);
       colony.tripSteps[ant] = 0;
       colony.lastEdge[ant] = -1;
     }
@@ -224,8 +255,17 @@ export function minEdgePheromone(colony: Colony): number {
   return least;
 }
 
+/**
+ * The retained trips, oldest first — the order `reading()`'s `slice(-window)`
+ * depends on. Before the ring wraps this is the array itself; after, it is
+ * unwrapped into a fresh one, so no caller can see storage order.
+ */
 export function completedTripLengths(colony: Colony): readonly number[] {
-  return colony.trips;
+  if (colony.trips.length < colony.tripHistory) return colony.trips;
+  return [
+    ...colony.trips.slice(colony.tripHead),
+    ...colony.trips.slice(0, colony.tripHead),
+  ];
 }
 
 export function edgePheromone(
@@ -280,6 +320,8 @@ export function digest(colony: Colony): string {
   ]) {
     for (const byte of bytes) eat(byte);
   }
-  eat(colony.trips.length & 0xff);
+  // The total, not `trips.length` — that saturates at the ring's capacity and
+  // would stop contributing to the digest the moment the buffer filled.
+  eat(colony.tripsCompleted & 0xff);
   return hash.toString(16).padStart(8, "0");
 }
