@@ -533,8 +533,17 @@ simulation is fixed-step. No threshold moves.
 
 ## Open decisions
 
-**None.** Decisions 1–8 are settled, 9 and 10 dissolved. The spike is unblocked and
-nothing below it is waiting on a call.
+11. **Beat 3 — the slider's range and mapping.** Not decided; recorded because the
+    spike measured it. `ρ = 1` sets `keep = 1 − ρ = 0`, so pheromone is wiped every
+    single step: total amnesia, a pure random walk, every edge reading zero. That is
+    a degenerate end-stop, not "forgetting too fast", and the visitor drags this
+    control — so the range the slider exposes and how its position maps to `ρ` is a
+    design question with more than one reasonable answer. It also bears on behaviour
+    (4), whose "never stabilises" needs a regime where a trail exists and fails to
+    settle, rather than one where no trail forms at all.
+
+Decisions 1–8 are settled, 9 and 10 dissolved. The spike is unblocked and nothing
+in slice 1 is waiting on a call.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its
 own condition (a), and beat 4's fixture source is explicitly deferred to slice 8.
