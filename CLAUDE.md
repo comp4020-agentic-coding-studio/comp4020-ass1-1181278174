@@ -12,22 +12,27 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
 
 ## This prototype
 
-- **The claim (h1 draft, B′ — Decision 22):** *No ant knows the map. The colony still finds
-  its way — as long as it forgets, and not too fast.* Four beats, one mechanic — a road grows
-  from nothing; you block it, and with no forgetting they pour into the dead end and a ghost
-  road holds them there; a little forgetting heals the break in about a second; too much and no
-  road survives. See `PLAN.md`. **The verb is blocking the road, not opening a shortcut.**
-  Beat 4 (a Canberra street fixture) is a re-skin, scheduled last, cut without negotiation if
-  it needs **«a new verb, a new readout, a new control, or more than 3 sentences of its own»**.
-  A second mechanic (parameter panel, traffic model, TSP, graph routing, a third scene,
-  algorithm comparison) is out — say so instead of building it.
-- **What replaced the old claim, and why it is not negotiable back.** B said a middle band of
-  forgetting makes the colony switch to a shortcut you open. On the field that is **false**:
-  lock-in is absolute — an established road holds at 2.07× with **0% of trips through the
-  doorway at every ρ tried**, and moving the slider afterwards changes nothing
-  (`docs/spikes/2026-08-17-field-v2-sequence-advisor.md`). A wander knob ε was spiked to buy
-  the switch and rejected on the evidence (Decision 21). This is also what Goss and Deneubourg
-  found in real ants. "They never take the shortcut you open" is now a footnote, not a beat.
+- **The claim (h1 draft — Decision 22):** *No ant knows the map. The road appears anyway —
+  and heals itself when you break it.* Three beats, one mechanic — a road grows from nothing;
+  you draw a wall across it and they pile up, spread out and find a way round, the reading
+  falling back; then the forgetting rate and the speed are yours to play with. See `PLAN.md`.
+  **The verb is drawing a wall on the road.** Beat 4 (a Canberra street fixture) is a re-skin,
+  scheduled last, cut without negotiation if it needs **«a new verb, a new readout, a new
+  control, or more than 3 sentences of its own»**. A second mechanic (parameter panel, traffic
+  model, TSP, graph routing, a third scene, algorithm comparison) is out — say so instead of
+  building it.
+- **This claim replaced two others, and the reason is in the evidence, not in taste.**
+  **B** said a middle band of forgetting makes the colony leave a long road for a shortcut you
+  open. On the field that is **false**: an established road holds at 2.07× with **0% of trips
+  through the doorway at every ρ tried**, and a wander knob ε was spiked and rejected
+  (`docs/spikes/2026-08-17-field-v2-sequence-advisor.md`, Decision 21). **B′** then made the
+  ρ = 0 ghost road and the too-fast-forgetting collapse into load-bearing beats — but the two
+  supplementary spikes showed the first needs the road to have grown at ρ = 0 and the second
+  needs a slider that reaches 0.2, so both depend on the visitor doing things in one order.
+  A claim whose beats depend on operating order is not a claim you can guarantee. What is
+  left is what the colony does whatever you do to it: it builds a road, and it repairs one.
+  "They never take the shortcut you open" survives as a footnote — it is the real
+  Goss/Deneubourg result and worth keeping somewhere.
 - **Beat 1 is live emergence.** Zero pheromone at load, nothing pre-baked. The opening, not a
   tutorial: after ≤ 2 of the six argument sentences a visitor with no background can say "each
   ant only leaves a little scent and follows scent" and "nobody planned that road". Verified

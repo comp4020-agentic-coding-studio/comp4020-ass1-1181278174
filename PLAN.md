@@ -997,11 +997,81 @@ Both are questions of the slider's range and of the order of the beats, not of
 the engine, and both are the director's to settle. They are recorded here rather
 than fixed, because fixing either one means changing a control or a beat.
 
+### Decision 23 — the claim simplifies to A, and the field opens up
+
+Director text, verbatim (Chinese as written; the English is a gloss by the agent):
+
+> Decision 22 —— 简化：主张回到 A，遗忘率和速度是给访客玩的旋钮。
+>
+> 一、主张与拍子
+>   h1: No ant knows the map. The road appears anyway — and heals itself when
+>   you break it.
+>   ① 路从零长出来（不变）；② 你在路上画一道墙截断它——它们堆在墙前、散开、
+>   绕出新路，读数回落；③ 玩：遗忘率和速度随你调——调到 0，旧路的鬼影会困住
+>   它们一阵；调到很高，什么路都留不住；"a tendency, not a guarantee" 留在
+>   最后一句论证句里。B′ 的三段式不再是正拍：上一轮两个补充 spike 说明第二拍
+>   依赖路在 ρ=0 下长出来、第四拍依赖滑杆够到 0.2 以上——太依赖操作顺序，
+>   不适合当担保的论点。改成访客自己能发现的现象。
+
+The director numbered this 22; PLAN.md already had a 22, so it is recorded here
+as **23** and the director's own reference by name is what matters.
+
+**Field v4 — built.** Open ground: no wall, no doorway. 60×40, **2208 nodes,
+4193 edges, 192 blocked cells**, twenty blocks of 2×2 to 4×4 scattered over the
+field with four in the band between nest and food, nest zone at (6,20) and food
+zone at (53,20) with three clear cells around each. **BFS zone to zone: 47
+moves.** v3 is kept as `FIELD_V3` and frozen, because every table in
+`docs/spikes/` was measured on it.
+
+### What turn A measured, and what it costs the claim
+
+Three findings, none of them fatal, all of them the director's to weigh.
+
+**1. The road forms, but it is loose.** On v4 at the page's ρ = 0.01 the first
+trip completes at **step 348 (about a second)**, and the reading settles at
+**1.99× at ten seconds and 1.96× at twenty** — against 1.07× on v3. Open ground
+has many routes of similar length, so the colony spreads across a band instead of
+committing to a line. Beat 1 still reads — a road appears from nothing, fast —
+but the *number* beside it is not a tight one, and `EMERGED` will have to be
+derived against this rather than against v3's.
+
+**2. Healing works, and the page's default rate is the worst of the rates
+tried.** Breaking the road with an 11-cell bar after 3000 steps
+(`docs/spikes/2026-08-17-field-v4-block.md`): ρ = 0.002, 0.005 and 0.02 all heal
+within **250 steps**; ρ = 0 never does (3.68× before, still 2.05× after 12,000);
+and **ρ = 0.01 — the page default — also never reaches ≤ 1.6×**, ending at 1.67×.
+That is very likely the loose road of finding 1 rather than anything about the
+rate, but it means the default is the one value where beat 2 does not land
+cleanly. Worth settling before derive.
+
+**3. ε is worse than expected, and its own expectation is on the record.** The
+director wrote, before the run: *"预期：ε≈0.005 读数 1.2–1.3×、几十只在游荡、
+愈合不受影响"*. One of the three held.
+
+| ε | reading at 20 s | ants off the road | healing at ρ = 0.005 |
+|---|---|---|---|
+| 0 | 1.96× | 0 of 400 | 250 steps |
+| 0.003 | 1.74× | 52 of 400 | **4750 steps** |
+| 0.006 | 2.18× | 44 of 400 | **never** |
+| 0.01 | 2.00× | 67 of 400 | **never** |
+
+The wandering appears as hoped — a few dozen ants on unmarked ground — but the
+reading never approaches 1.2–1.3×, and **ε actively damages healing**: at 0.003 it
+goes from 250 steps to 4750, and at 0.006 and above the break never heals at any
+ρ. Since healing is now beat 2, ε costs the claim more than it buys the picture.
+**Reported, not adopted.**
+
+*A measurement error worth keeping.* The first version of "off the road" counted
+ants more than one cell from the BFS shortest route and reported **94–96% at every
+ε including zero** — true, and useless, because the colony's road is not the BFS
+route. It now counts ants on ground whose scent is under a tenth of the busiest
+cell's, which is what the eye calls wandering.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–22 are recorded, 9 and 10 dissolved. Field v4
-(open field, free wall drawing, ε measured for the look only) is the director's
-next message. Beat 4's fixture source is
+**None settled by me.** Decisions 1–23 are recorded, 9 and 10 dissolved. Turn B is
+`toggleCell` and drawing walls; turn C is the speed control, the exponential
+slider mapping, the re-pointed behaviour tests and derive. Beat 4's fixture source is
 deferred to slice 8 as a condition, not an open question.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its
