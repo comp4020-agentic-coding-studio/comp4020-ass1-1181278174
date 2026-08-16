@@ -11,7 +11,8 @@
     "check": "pnpm typecheck && pnpm build && oxlint --ignore-path .gitignore && stylelint \"**/*.css\" --ignore-path .gitignore --allow-empty-input && vitest run",
     "check:evidence": "node scripts/check-evidence.ts",
     "spike": "node scripts/spike.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "derive": "node scripts/derive.ts"
   },
   "devDependencies": {
     "@types/jsdom": "^27.0.0",
