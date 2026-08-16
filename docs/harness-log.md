@@ -80,5 +80,7 @@ The second is the one with no test. It is a rule about how the record is written
 and only a reader can enforce it — which is why it is written into the document a
 reader opens first.
 
-**Citation.** This review's fix commit; `PLAN.md` (Decisions 6–8 and the provenance
-preamble), `spec/oracles.md` (mutants split, spike watch), `TASKS.md` (slice 1).
+**Citation.**
+[`e05b790`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/e05b790)
+— `PLAN.md` (Decisions 6–8 and the provenance preamble), `spec/oracles.md` (the
+mutants split and the spike watch), `TASKS.md` (slice 1).

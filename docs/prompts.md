@@ -217,7 +217,9 @@ The director read `PLAN.md`, `spec/oracles.md`, `TASKS.md` and `docs/` and retur
 six numbered corrections. This message carries the conditions for Decisions 6, 7 and
 8, which the earlier round had settled as bare choices with no conditions attached.
 
-**Produced.** Commit hash pending — the fix commit that this review produced.
+**Produced.**
+[`e05b790`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/e05b790)
+— the six corrections, and the conditions for Decisions 6–8.
 
 **Why it is here.** It caught things no check could:
 
