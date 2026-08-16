@@ -84,7 +84,7 @@ function show(colony: engine.Colony, against: number, label: string): void {
   );
 }
 
-function header(): void {
+function header(after: number = AFTER): void {
   console.log(`fixture   ${fixture.name}`);
   console.log(
     `graph     ${fixture.nodes.length} nodes, ${fixture.edges.length} edges; ` +
@@ -95,7 +95,7 @@ function header(): void {
     `params    h=${fixture.params.h}  k=${fixture.params.k}  floor=${fixture.params.floor}   (fixture, authoritative in spec/oracles.md)`,
   );
   console.log(
-    `run       SETTLE=${SETTLE} then ${AFTER} after opening; window=${WINDOW} trips, minTrips=${MIN_TRIPS}`,
+    `run       SETTLE=${SETTLE} then ${after} after opening; window=${WINDOW} trips, minTrips=${MIN_TRIPS}`,
   );
   console.log(`          ALL PLACEHOLDERS, NOT DERIVED — exploratory only.`);
 }
@@ -120,21 +120,27 @@ function trial(rho: number): void {
   console.log(`    digest ${engine.digest(colony)}`);
 }
 
+
 // ---------------------------------------------------------------------------
-// --sweep: measurement only. No threshold, no parameter change, no conclusion.
+// Sweeps. Measurement only: no threshold, no engine change, no params change.
 // ---------------------------------------------------------------------------
 
-const SWEEP_RHOS = [0, 0.001, 0.003, 0.01, 0.03, 0.05, 0.1, 0.2, 0.3, 0.5];
-const SWEEP_SEEDS = [1, 2, 3, 4, 5];
+const COARSE_RHOS = [0, 0.001, 0.003, 0.01, 0.03, 0.05, 0.1, 0.2, 0.3, 0.5];
+const COARSE_SEEDS = [1, 2, 3, 4, 5];
+const FINE_RHOS = [0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2];
+const FINE_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const SWEEP_SAMPLE = 250;
 
 /**
- * A REPORTING MARK, not a threshold. It exists so "when did it come down" has an
- * answer in this table. Nothing derives from it and no test may import it —
- * SWITCHED is still a symbol and is derived by two-sided separation, not by
- * eyeballing this column.
+ * REPORTING MARKS, not thresholds. They exist so "when did it come down" and "did
+ * it stay down" have answers in these tables. Nothing derives from them and no test
+ * may import them — SWITCHED and the rest are still symbols, derived by two-sided
+ * separation against the negative controls, never by reading a sweep.
  */
-const REPORT_MARK = 1.5;
+const CAME_DOWN = 1.25;
+const WENT_BACK_UP = 1.5;
+
+const SHORT_TRIP = pathLength(fixture.branches.short);
 
 const LONG_EDGES = fixture.branches.long
   .slice(0, -1)
@@ -142,19 +148,22 @@ const LONG_EDGES = fixture.branches.long
 
 interface Sample {
   readonly step: number;
-  readonly ratio: number | null;
-  readonly share: number | null;
+  /** Decision 5 as it stands: windowed median ÷ BFS. */
+  readonly median: number | null;
+  /** The amendment under consideration: windowed mean ÷ BFS. Not yet in reading.ts. */
+  readonly mean: number | null;
+  /** Share of the window's trips that took the short branch exactly. */
+  readonly shortTrips: number | null;
+  /** Share of ants standing on the short branch's interior right now. */
+  readonly antShare: number | null;
 }
 
 interface Run {
   readonly rho: number;
   readonly seed: number;
-  /** Mean (home + food) per long edge at the end of SETTLE. */
   readonly tauLong: number;
-  /** P(step to S1) at NEST, from (k + τ + floor)^h over the open edges. */
   readonly explore: number;
   readonly samples: readonly Sample[];
-  readonly firstBelowMark: number | null;
   readonly trips: number;
 }
 
@@ -165,32 +174,50 @@ function shareOnShort(colony: engine.Colony): number | null {
   return onShort + onLong === 0 ? null : onShort / (onShort + onLong);
 }
 
-function measureOne(rho: number, seed: number): Run {
+/**
+ * Both readings over the SAME window, side by side, so the choice between them is
+ * made on evidence. reading.ts is untouched: the mean is computed here only.
+ */
+function bothReadings(colony: engine.Colony) {
+  const trips = engine.completedTripLengths(colony);
+  const viaMedian = reading(trips, BFS_OPEN, {
+    window: WINDOW,
+    minTrips: MIN_TRIPS,
+  });
+  if (viaMedian.status === "no reading yet") {
+    return { median: null, mean: null, shortTrips: null };
+  }
+  const recent = trips.slice(-WINDOW);
+  const sum = recent.reduce((total, length) => total + length, 0);
+  const short = recent.filter((length) => length === SHORT_TRIP).length;
+  return {
+    median: viaMedian.ratio,
+    mean: sum / recent.length / BFS_OPEN,
+    shortTrips: short / recent.length,
+  };
+}
+
+function runOne(rho: number, seed: number, after: number): Run {
   const colony = engine.createColony(fixture, { rho, seed, ants: 64 });
   for (let i = 0; i < SETTLE; i += 1) engine.step(colony);
 
   const tauLong =
-    LONG_EDGES.reduce((sum, [a, b]) => {
+    LONG_EDGES.reduce((total, [a, b]) => {
       const { home, food } = engine.edgePheromone(colony, a, b);
-      return sum + home + food;
+      return total + home + food;
     }, 0) / LONG_EDGES.length;
   const explore = engine.choiceDistribution(colony, fixture.nest).get("S1") ?? 0;
 
   engine.toggleShortcut(colony);
 
   const samples: Sample[] = [];
-  let firstBelowMark: number | null = null;
-  for (let done = 0; done < AFTER; done += SWEEP_SAMPLE) {
+  for (let done = 0; done < after; done += SWEEP_SAMPLE) {
     for (let i = 0; i < SWEEP_SAMPLE; i += 1) engine.step(colony);
-    const step = done + SWEEP_SAMPLE;
-    const { ratio } = reading(engine.completedTripLengths(colony), BFS_OPEN, {
-      window: WINDOW,
-      minTrips: MIN_TRIPS,
+    samples.push({
+      step: done + SWEEP_SAMPLE,
+      ...bothReadings(colony),
+      antShare: shareOnShort(colony),
     });
-    samples.push({ step, ratio, share: shareOnShort(colony) });
-    if (firstBelowMark === null && ratio !== null && ratio < REPORT_MARK) {
-      firstBelowMark = step;
-    }
   }
 
   return {
@@ -199,7 +226,6 @@ function measureOne(rho: number, seed: number): Run {
     tauLong,
     explore,
     samples,
-    firstBelowMark,
     trips: engine.completedTripLengths(colony).length,
   };
 }
@@ -212,89 +238,59 @@ const middle = (values: readonly number[]): number => {
     : ((sorted[half - 1] as number) + (sorted[half] as number)) / 2;
 };
 
-function sweep(): void {
-  header();
-  console.log(
-    `sweep     ${SWEEP_RHOS.length} rho x ${SWEEP_SEEDS.length} seeds, samples every ${SWEEP_SAMPLE} steps`,
-  );
-  console.log(
-    `          ${REPORT_MARK}x below is a REPORTING MARK, not a threshold. Nothing derives from it.`,
-  );
+const fmt = (value: number | null, unit = "×") =>
+  value === null ? "—" : `${value.toFixed(3)}${unit}`;
 
-  const runs = SWEEP_RHOS.flatMap((rho) =>
-    SWEEP_SEEDS.map((seed) => measureOne(rho, seed)),
-  );
+/** First sample whose mean is below CAME_DOWN, or null if it never is. */
+const cameDown = (run: Run): number | null =>
+  run.samples.find((s) => s.mean !== null && s.mean < CAME_DOWN)?.step ?? null;
 
-  console.log("");
-  console.log("per rho, median over seeds:");
-  console.log(
-    "    rho      tau/long-edge   P(explore)   final reading   first <1.5x   final short-branch",
-  );
-  const summary = SWEEP_RHOS.map((rho) => {
-    const mine = runs.filter((run) => run.rho === rho);
-    const finals = mine.map(
-      (run) => (run.samples.at(-1)?.ratio ?? Number.NaN) as number,
-    );
-    const firsts = mine.map((run) => run.firstBelowMark ?? Infinity);
-    const shares = mine.map((run) => (run.samples.at(-1)?.share ?? 0) * 100);
-    const first = middle(firsts);
-    const row = {
-      rho,
-      tau: middle(mine.map((run) => run.tauLong)),
-      explore: middle(mine.map((run) => run.explore)),
-      final: middle(finals),
-      first: Number.isFinite(first) ? `${first}` : "never",
-      share: middle(shares),
-    };
-    console.log(
-      `    ${String(rho).padEnd(9)}${row.tau.toFixed(1).padStart(13)}` +
-        `${(row.explore * 100).toFixed(3).padStart(12)}%` +
-        `${row.final.toFixed(3).padStart(16)}x${row.first.padStart(14)}` +
-        `${row.share.toFixed(0).padStart(19)}%`,
-    );
-    return row;
-  });
-
-  const file = writeRaw(runs, summary);
-  console.log("");
-  console.log(`raw table -> ${file}`);
-  console.log("Measurement only. No threshold derived, no parameter changed.");
+/** Samples above WENT_BACK_UP after it first came down. Zero means it stayed. */
+function reCrossings(run: Run): number {
+  const from = cameDown(run);
+  if (from === null) return 0;
+  return run.samples.filter(
+    (s) => s.step > from && s.mean !== null && s.mean > WENT_BACK_UP,
+  ).length;
 }
 
 function writeRaw(
+  title: string,
+  slug: string,
   runs: readonly Run[],
-  summary: readonly { rho: number; first: string }[],
+  after: number,
+  summary: readonly string[],
 ): string {
-  // Local date, not toISOString(): UTC is a day behind in Canberra for most of the
-  // working evening, and an evidence file dated yesterday is a small lie.
+  // Local date, not toISOString(): UTC is a day behind in Canberra all evening, and
+  // an evidence file dated yesterday is a small lie.
   const now = new Date();
   const stamp = [
     now.getFullYear(),
     String(now.getMonth() + 1).padStart(2, "0"),
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
-  const dir = "docs/spikes";
-  mkdirSync(dir, { recursive: true });
-  const path = `${dir}/${stamp}-rho-sweep.md`;
+  mkdirSync("docs/spikes", { recursive: true });
+  const path = `docs/spikes/${stamp}-${slug}.md`;
 
   const lines = [
-    `# ρ sweep — ${stamp}`,
+    `# ${title} — ${stamp}`,
     "",
-    "Measurement only. **No threshold was derived and no parameter was changed.**",
-    `The 1.5× column is a reporting mark so "when did it come down" has an answer;`,
-    "`SWITCHED` is still a symbol and is derived by two-sided separation against the",
-    "negative controls, never by reading this table.",
+    "Measurement only. **No threshold was derived, no engine or parameter changed.**",
+    `The ${CAME_DOWN}× and ${WENT_BACK_UP}× columns are reporting marks so "when did`,
+    'it come down" and "did it stay down" have answers. `SWITCHED` and the rest are',
+    "still symbols, derived by two-sided separation against the negative controls.",
+    "",
+    "Both readings are over the **same window**. `reading.ts` is untouched — the mean",
+    "is computed in the spike only, so Decision 5 can be settled on evidence.",
     "",
     `- fixture \`${fixture.name}\`, h=${fixture.params.h} k=${fixture.params.k} floor=${fixture.params.floor}, 64 ants`,
-    `- BFS ${BFS_CLOSED} closed → ${BFS_OPEN} open`,
-    `- SETTLE ${SETTLE}, then ${AFTER} steps after opening, sampled every ${SWEEP_SAMPLE}`,
+    `- BFS ${BFS_CLOSED} closed → ${BFS_OPEN} open; short trip = ${SHORT_TRIP} moves`,
+    `- SETTLE ${SETTLE}, then ${after} steps after opening, sampled every ${SWEEP_SAMPLE}`,
     `- reading window ${WINDOW} trips, minTrips ${MIN_TRIPS} (placeholders)`,
     "",
-    "## Per ρ, median over seeds",
+    "## Summary",
     "",
-    "| ρ | first sample < 1.5× |",
-    "|---|---|",
-    ...summary.map((row) => `| ${row.rho} | ${row.first} |`),
+    ...summary,
     "",
     "## Every run",
     "",
@@ -304,16 +300,19 @@ function writeRaw(
     lines.push(
       `### ρ = ${run.rho}, seed ${run.seed}`,
       "",
-      `τ per long edge at end of SETTLE: **${run.tauLong.toFixed(2)}** · ` +
-        `P(explore to S1) at NEST: **${(run.explore * 100).toFixed(4)}%** · ` +
-        `completed trips: ${run.trips} · ` +
-        `first sample < 1.5×: ${run.firstBelowMark ?? "never"}`,
+      `τ per long edge at end of SETTLE **${run.tauLong.toFixed(2)}** · ` +
+        `P(explore to S1) at NEST **${(run.explore * 100).toFixed(4)}%** · ` +
+        `completed trips ${run.trips} · ` +
+        `first mean < ${CAME_DOWN}× ${cameDown(run) ?? "never"} · ` +
+        `re-crossings > ${WENT_BACK_UP}× ${reCrossings(run)}`,
       "",
-      "| step after opening | reading | ants on short branch |",
-      "|---|---|---|",
+      "| step | median | mean | short trips | ants on short |",
+      "|---|---|---|---|---|",
       ...run.samples.map(
-        (sample) =>
-          `| ${sample.step} | ${sample.ratio === null ? "no reading yet" : `${sample.ratio.toFixed(3)}×`} | ${sample.share === null ? "n/a" : `${(sample.share * 100).toFixed(0)}%`} |`,
+        (s) =>
+          `| ${s.step} | ${fmt(s.median)} | ${fmt(s.mean)} | ` +
+          `${s.shortTrips === null ? "—" : `${(s.shortTrips * 100).toFixed(0)}%`} | ` +
+          `${s.antShare === null ? "—" : `${(s.antShare * 100).toFixed(0)}%`} |`,
       ),
       "",
     );
@@ -323,8 +322,123 @@ function writeRaw(
   return path;
 }
 
-if (process.argv.includes("--sweep")) {
-  sweep();
+function coarse(): void {
+  header();
+  console.log(
+    `sweep     ${COARSE_RHOS.length} rho x ${COARSE_SEEDS.length} seeds, sampled every ${SWEEP_SAMPLE}`,
+  );
+  console.log(
+    `          both readings over the same window; reading.ts untouched`,
+  );
+
+  const runs = COARSE_RHOS.flatMap((rho) =>
+    COARSE_SEEDS.map((seed) => runOne(rho, seed, AFTER)),
+  );
+
+  const head =
+    "    rho      tau/long   P(explore)   final median   final mean   short trips   ants short";
+  console.log("");
+  console.log("per rho, median over seeds:");
+  console.log(head);
+
+  const rows = COARSE_RHOS.map((rho) => {
+    const mine = runs.filter((run) => run.rho === rho);
+    const last = mine.map((run) => run.samples.at(-1) as Sample);
+    const row = {
+      rho,
+      tau: middle(mine.map((run) => run.tauLong)),
+      explore: middle(mine.map((run) => run.explore)),
+      median: middle(last.map((s) => s.median ?? Number.NaN)),
+      mean: middle(last.map((s) => s.mean ?? Number.NaN)),
+      shortTrips: middle(last.map((s) => (s.shortTrips ?? 0) * 100)),
+      antShare: middle(last.map((s) => (s.antShare ?? 0) * 100)),
+    };
+    console.log(
+      `    ${String(rho).padEnd(9)}${row.tau.toFixed(1).padStart(10)}` +
+        `${(row.explore * 100).toFixed(3).padStart(12)}%` +
+        `${row.median.toFixed(3).padStart(15)}x${row.mean.toFixed(3).padStart(13)}x` +
+        `${row.shortTrips.toFixed(0).padStart(13)}%${row.antShare.toFixed(0).padStart(12)}%`,
+    );
+    return row;
+  });
+
+  const table = [
+    "| ρ | τ/long | P(explore) | final median | final mean | short trips | ants short |",
+    "|---|---|---|---|---|---|---|",
+    ...rows.map(
+      (r) =>
+        `| ${r.rho} | ${r.tau.toFixed(1)} | ${(r.explore * 100).toFixed(3)}% | ` +
+        `${r.median.toFixed(3)}× | ${r.mean.toFixed(3)}× | ` +
+        `${r.shortTrips.toFixed(0)}% | ${r.antShare.toFixed(0)}% |`,
+    ),
+  ];
+  console.log("");
+  console.log(`raw table -> ${writeRaw("ρ sweep, both readings", "rho-sweep", runs, AFTER, table)}`);
+  console.log("Measurement only. No threshold derived, no parameter changed.");
+}
+
+function fine(): void {
+  const after = 6000;
+  header(after);
+  console.log(
+    `fine      ${FINE_RHOS.length} rho x ${FINE_SEEDS.length} seeds, ${after} steps after opening, sampled every ${SWEEP_SAMPLE}`,
+  );
+  console.log(
+    `          "came down" = mean < ${CAME_DOWN}x; "went back up" = a later sample > ${WENT_BACK_UP}x`,
+  );
+
+  const runs = FINE_RHOS.flatMap((rho) =>
+    FINE_SEEDS.map((seed) => runOne(rho, seed, after)),
+  );
+
+  console.log("");
+  console.log("per rho, median over seeds unless stated:");
+  console.log(
+    "    rho     first mean<1.25x   seeds never   final mean   ants short   re-cross>1.5x",
+  );
+
+  const rows = FINE_RHOS.map((rho) => {
+    const mine = runs.filter((run) => run.rho === rho);
+    const downs = mine.map((run) => cameDown(run) ?? Infinity);
+    const never = downs.filter((step) => !Number.isFinite(step)).length;
+    const first = middle(downs);
+    const last = mine.map((run) => run.samples.at(-1) as Sample);
+    const row = {
+      rho,
+      first: Number.isFinite(first) ? `${first}` : "never",
+      never,
+      mean: middle(last.map((s) => s.mean ?? Number.NaN)),
+      antShare: middle(last.map((s) => (s.antShare ?? 0) * 100)),
+      recross: middle(mine.map((run) => reCrossings(run))),
+    };
+    console.log(
+      `    ${String(rho).padEnd(8)}${row.first.padStart(17)}` +
+        `${String(row.never).padStart(14)}${row.mean.toFixed(3).padStart(13)}x` +
+        `${row.antShare.toFixed(0).padStart(13)}%${row.recross.toFixed(1).padStart(16)}`,
+    );
+    return row;
+  });
+
+  const table = [
+    `| ρ | first mean < ${CAME_DOWN}× | seeds never | final mean | ants short | re-crossings > ${WENT_BACK_UP}× |`,
+    "|---|---|---|---|---|---|",
+    ...rows.map(
+      (r) =>
+        `| ${r.rho} | ${r.first} | ${r.never}/${FINE_SEEDS.length} | ` +
+        `${r.mean.toFixed(3)}× | ${r.antShare.toFixed(0)}% | ${r.recross.toFixed(1)} |`,
+    ),
+  ];
+  console.log("");
+  console.log(
+    `raw table -> ${writeRaw("ρ fine sweep", "rho-fine", runs, after, table)}`,
+  );
+  console.log("Measurement only. No threshold derived, no parameter changed.");
+}
+
+if (process.argv.includes("--fine")) {
+  fine();
+} else if (process.argv.includes("--sweep")) {
+  coarse();
 } else {
   header();
   for (const rho of [0, 0.05, 1]) trial(rho);
