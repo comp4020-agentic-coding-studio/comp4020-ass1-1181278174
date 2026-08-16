@@ -37,22 +37,29 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
   tutorial: after ≤ 2 of the six argument sentences a visitor with no background can say "each
   ant only leaves a little scent and follows scent" and "nobody planned that road". Verified
   by a cold read (two people with no background) — no test can hold it.
-- **Four controls, hard cap** (was three; amended with the speed control, Decision 25):
-  **draw a wall** — the one verb, a drag on the canvas itself, with no button; press on open
-  ground to build and on a wall to rub out, the cell you press deciding which the whole stroke
-  does. Keyboard: arrow keys move a visible cursor, Enter toggles, Escape hides it ·
-  **forgetting rate** — native `<input type=range>`, "never forget" to "forget everything",
-  default measured rather than chosen (`FIELD_RHO`) · **speed** — 75 / 150 / 300 steps per
-  second, a native radio group, default 150 · **run / pause / reset** — pause **visible**,
-  because WCAG 2.2.2 applies and the sim runs forever. `Clear walls` is an undo for the verb
-  and appears only once there is something to undo; `Watch it grow` is the run control under
-  `prefers-reduced-motion`. Neither is a fifth control.
-  **Why the cap moved from three to four.** The other three each change what the colony DOES;
-  speed changes only how fast you watch it do it — the engine is fixed-step, so the same step
-  count gives the same colony at 75 as at 300, and `spec/loop.test.ts` holds that. A control
-  that cannot change the outcome is not competing for what the cap protects, which is the
-  visitor's attention on the argument. The cap still forbids a second mechanic: ant count,
-  pheromone strength, random obstacles and ε all stay out.
+- **Five controls, hard cap** (three → four with speed, Decision 25; four → five with the
+  scene, Decision 26): **scene** — three buttons, `Blank — draw your own` / `Random obstacles`
+  / `Maze`; a scene is nothing but a set of wall cells laid out on the blank field with the one
+  verb before the ants set out, so it is terrain, not a mechanic. Choosing one restarts the
+  ants; `Random obstacles` pressed again is another scatter (seeded, so the same press count is
+  the same scene) · **draw a wall** — the one verb, a drag on the canvas itself, with no
+  button; press on open ground to build and on a wall to rub out, the cell you press deciding
+  which the whole stroke does. Keyboard: arrow keys move a visible cursor, Enter toggles,
+  Escape hides it · **forgetting rate** — native `<input type=range>`, "never forget" to
+  "forget everything", default measured rather than chosen (`FIELD_RHO`) · **speed** — a native
+  `<input type=range>`, 30 to 300 steps per second, default 150 · **run / pause / reset** —
+  pause **visible**, because WCAG 2.2.2 applies and the sim runs forever. `Clear walls` is an
+  undo for the verb and appears only once there is something to undo; it is not a sixth.
+  **The page loads PAUSED for everyone** (Decision 26): nothing moves until Run is pressed, so a
+  visitor can pick a scene or draw first, and a page that is only being read stays still. Beat 1
+  is still live emergence from zero — it waits for the press. There is no autoplay branch and no
+  `Watch it grow` any more; the reduced-motion branch differs only in repaint cadence.
+  **Why the cap moved.** Speed changes only how fast you watch — the engine is fixed-step, so
+  the same step count gives the same colony at 30 as at 300, and `spec/loop.test.ts` holds that.
+  A scene changes only where the walls are, with the same verb the visitor holds. Neither
+  competes for what the cap protects, which is the visitor's attention on the one argument. The
+  cap still forbids a second mechanic: ant count, pheromone strength and ε stay out; "random
+  obstacles" is in only as pre-drawn walls, never as a parameter.
   The epilogue is invariant tests only, no thresholds (the list is in `PLAN.md`), because a
   visitor's own maze has no correct answer.
 - **Prose ≤ 8 sentences:** 6 argument + 1 citation + 1 carrying all three applications (ends
@@ -104,7 +111,7 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
   has `touch-action: none` and pointer capture; every pointer action has a keyboard path — the
   map is in `PLAN.md`; coordinates normalised; `aria-pressed` on toggles, a throttled
   `aria-live` readout; `prefers-reduced-motion` keeps informative motion, drops decorative
-  motion, does not autoplay, and slows the cadence to *≤ 4 fps or a "step 200" button* — with
+  motion, and slows the cadence to *≤ 4 fps or a "step 200" button* (nobody autoplays, Decision 26) — with
   *a dedicated test for the reduced-motion branch*, because the branch nobody exercises is the
   broken one.
 

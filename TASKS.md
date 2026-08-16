@@ -304,7 +304,12 @@ The verb becomes *block the road*, and forgetting is what heals it.
 - [ ] **Derive on the field.** Thresholds per fixture, ρ band per fixture, both
       margins, mutants two-sided. Regime labels come back on when this lands, and
       `CLAUDE.md`'s Decision 11 slider line is amended with them.
-- [ ] **The eight sentences** (slice 5), the h1 from B′'s title candidate.
+- [x] **Scenes, paused start, speed slider** (Decision 26) — field v5 (blank),
+      `src/fixtures/presets.ts` (random scatter, the maze — fifth layout, chosen
+      by measurement), the page loads paused, speed 30–300 on a range input,
+      the control cap at five with the reason. Written, committed and pushed by
+      the director's advisor at the director's instruction (course key exhausted).
+- [ ] **The eight sentences** (slice 5), the h1 is Claim A's.
 - [ ] **The epilogue** — free wall drawing, and the "it never takes the shortcut
       you open" footnote, if it earns its place.
 

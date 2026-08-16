@@ -287,3 +287,26 @@ the spikes were re-run in the repo rather than filed.
 **Citation.** This commit — `CLAUDE.md` (the claim and the four beats),
 `PLAN.md` (Decisions 21 and 22), `docs/harness-log.md`.
 
+### 2026-08-17 — the cap moves to five, and the page stops autoplaying
+
+**What happened.** The director asked for three scenes (blank, random obstacles, a
+maze with several routes), a paused start, and a speed slider — and the harness
+said four controls, autoplay for everyone but reduced-motion, and "random obstacles
+stay out".
+
+**What I did instead of the obvious thing.** The obvious thing was to add the
+buttons and quietly leave `CLAUDE.md` describing a page that no longer exists. The
+harness entry moved with the page: the cap is five with the reason written beside
+it (a scene is walls laid out with the visitor's own verb — terrain, not a
+mechanic; random obstacles are in only as pre-drawn walls, never as a parameter),
+the autoplay branch was removed rather than left dormant (Decision 8: an
+unexercised branch is a broken one), and `spec/reduced-motion.test.ts` now asserts
+the paused start under both preferences and enumerates the five controls by id.
+
+**How I knew it was right.** The old test — "autoplays, because beat 1 is live
+emergence" — went red the moment the page stopped autoplaying, which is what a
+guard is for; it was rewritten to say what the page now promises. `pnpm check`
+217/217; harness-sync 8/8.
+
+**Citation.** This commit — `CLAUDE.md`, `PLAN.md` (Decision 26),
+`spec/reduced-motion.test.ts`, `src/ui/motion.ts`.
