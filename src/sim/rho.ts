@@ -1,11 +1,40 @@
-// The forgetting rates a threshold can be derived at, or a test exercised at —
-// one place, so the two cannot drift apart the way the SWITCHED test's stale
-// ρ = 0.05 (predating Decision 11) and the UNSTABLE test's forbidden ρ = 1 did.
+// The coordinates every measurement is taken on — the forgetting rates, the
+// sampling grid, and the observation horizon — in one place, so a threshold
+// cannot be derived on one set of coordinates and exercised on another. That
+// already happened once: the SWITCHED test ran the real engine at ρ = 0.05
+// (stale, pre-Decision-11) against a threshold derived at 0.12, and behaviour
+// (4)'s test ran at the ρ = 1 Decision 11 rules out.
 //
-// Not an engine constant (src/sim/params.ts): the UI slider imports this too,
-// so RHO.default is also the control's default position, not just a test
-// fixture. Decision 11 fixes the slider's default at 0.12 and rules out ever
-// measuring behaviour (4) at ρ = 1, "which is off the control" — scripts/derive.ts
-// derived EMERGED/SWITCHED/M at RHO.default and UNSTABLE/K at RHO.max for exactly
-// that reason.
+// Not engine constants (src/sim/params.ts): the UI imports these too. RHO.default
+// is the slider's default position, RHO.max its maximum, and SAMPLE is the grid
+// the trace strip under the canvas plots on — the same grid the derivation
+// sampled, so the line on screen and the number in the test cannot disagree.
+//
+// The file is named for RHO because that is what it held first; it is the
+// measurement grid that grew into it, not the other way round.
+
+/**
+ * Decision 11: the slider is linear 0.00–0.25, step 0.01, default 0.12, and
+ * ρ = 1 is off the control entirely — at ρ = 1 pheromone is wiped every step and
+ * no trail forms at all, so a test there asserts against a degenerate graph
+ * rather than against forgetting.
+ *
+ * `scripts/derive.ts` derived EMERGED/SWITCHED/M at `default`, LOCKED/N at
+ * `locked`, and UNSTABLE/K at `max`, for exactly that reason.
+ */
 export const RHO = { locked: 0, default: 0.12, max: 0.25 } as const;
+
+/**
+ * Steps between trace samples. 250 is the grid every distribution in
+ * spec/oracles.md §3 was measured on, which is why `M` was rounded up to a
+ * multiple of it — every derived step count is a whole number of samples.
+ */
+export const SAMPLE = 250;
+
+/**
+ * Steps a run is observed for after the shortcut opens. `N` (6000) equals this
+ * because `N` was derived as "the whole window held, no decay seen to measure",
+ * not because they mean the same thing: `N` is behaviour (2)'s bound, this is
+ * how long anything was watched at all.
+ */
+export const HORIZON = 6000;

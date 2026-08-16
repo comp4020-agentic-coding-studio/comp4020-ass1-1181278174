@@ -13,17 +13,20 @@ import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
 import { induce, pathLength } from "../src/fixtures/graph.ts";
 import { shortestPathLength } from "../src/oracle/bfs.ts";
 import * as realEngine from "../src/sim/engine.ts";
+import type { Reading } from "../src/sim/reading.ts";
 import { reading } from "../src/sim/reading.ts";
-import { RHO } from "../src/sim/rho.ts";
+import { HORIZON, RHO, SAMPLE } from "../src/sim/rho.ts";
+import { firstSampleBelow, longestRunBelow, trace } from "../src/sim/trace.ts";
 import { MUTANTS } from "../spec/mutants/index.ts";
 import type { Mutant } from "../spec/mutants/index.ts";
 
 const fixture = DOUBLE_BRIDGE;
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-const AFTER = 6000;
-const SAMPLE = 250;
-// The rate a threshold is derived at and the rate a test exercises it at share
-// one source now — see src/sim/rho.ts.
+// The rates, the grid and the horizon all come from src/sim/rho.ts, and the
+// sampling itself from src/sim/trace.ts — the derivation measures on exactly the
+// coordinates the tests and the page then use, or it is deriving for a different
+// experiment than the one that ships.
+const AFTER = HORIZON;
 const RHOS = { locked: RHO.locked, switching: RHO.default, unstable: RHO.max };
 
 const BFS_CLOSED = shortestPathLength(
@@ -184,7 +187,7 @@ function deriveWindow(settle: number): {
 
 interface RunResult {
   readonly settleRatio: number;
-  readonly samples: readonly (number | null)[];
+  readonly samples: readonly Reading[];
 }
 
 type Engine = { name: string; run: (rho: number, seed: number) => RunResult };
@@ -204,11 +207,11 @@ function makeRun(
     const settleRatio = reading(trips(state), BFS_CLOSED, { window, minTrips })
       .ratio as number;
     toggle(state);
-    const samples: (number | null)[] = [];
-    for (let done = 0; done < AFTER; done += SAMPLE) {
-      for (let i = 0; i < SAMPLE; i += 1) step(state);
-      samples.push(reading(trips(state), BFS_OPEN, { window, minTrips }).ratio);
-    }
+    const samples = trace(
+      { step, completedTripLengths: trips },
+      state,
+      { steps: AFTER, against: BFS_OPEN, window, minTrips },
+    );
     return { settleRatio, samples };
   };
 }
@@ -320,7 +323,7 @@ function main(): void {
   // --- LOCKED: ρ = 0 -----------------------------------------------------
   say(`## LOCKED — ρ = 0, after the shortcut opens`);
   say();
-  const lastOf = (r: RunResult) => r.samples.at(-1) ?? null;
+  const lastOf = (r: RunResult) => r.samples.at(-1)?.ratio ?? null;
   const realLocked = (real.get(RHOS.locked) as RunResult[]).map(
     (r) => lastOf(r) as number,
   );
@@ -355,7 +358,7 @@ function main(): void {
   say();
   const crossingsAt = (rs: RunResult[], below: number) =>
     rs.map((r) => {
-      const at = r.samples.findIndex((s) => s !== null && s < below);
+      const at = firstSampleBelow(r.samples, below);
       return at < 0 ? Infinity : (at + 1) * SAMPLE;
     });
   say(`(reported at several candidate SWITCHED values, so M and SWITCHED are chosen together)`);
@@ -372,25 +375,14 @@ function main(): void {
   // --- UNSTABLE / K: ρ = 0.25 --------------------------------------------
   say(`## UNSTABLE and K — ρ = 0.25`);
   say();
-  const longestRunBelow = (r: RunResult, below: number) => {
-    let best = 0;
-    let run = 0;
-    for (const s of r.samples) {
-      if (s !== null && s < below) {
-        run += 1;
-        best = Math.max(best, run);
-      } else run = 0;
-    }
-    return best;
-  };
   say(`| candidate UNSTABLE | REAL longest run below (max over seeds) | freshness longest run below (min over seeds) |`);
   say(`|---|---|---|`);
   for (const candidate of [1.1, 1.2, 1.3, 1.4]) {
     const realRuns = (real.get(RHOS.unstable) as RunResult[]).map((r) =>
-      longestRunBelow(r, candidate),
+      longestRunBelow(r.samples, candidate),
     );
     const mutantRuns = of("max-update freshness field", RHOS.unstable).map((r) =>
-      longestRunBelow(r, candidate),
+      longestRunBelow(r.samples, candidate),
     );
     say(
       `| ${candidate}× | **${Math.max(...realRuns)}** samples | **${Math.min(...mutantRuns)}** samples |`,
@@ -412,7 +404,8 @@ function main(): void {
     const rs = real.get(RHOS.locked) as RunResult[];
     let held = 0;
     for (let i = 0; i < (rs[0] as RunResult).samples.length; i += 1) {
-      if (rs.every((r) => (r.samples[i] ?? 0) >= candidate)) held = (i + 1) * SAMPLE;
+      if (rs.every((r) => (r.samples[i]?.ratio ?? 0) >= candidate))
+        held = (i + 1) * SAMPLE;
       else break;
     }
     say(`| ${candidate}× | ${held} |`);
@@ -478,7 +471,8 @@ function main(): void {
   const rs = real.get(RHOS.locked) as RunResult[];
   let heldAtLocked = 0;
   for (let i = 0; i < (rs[0] as RunResult).samples.length; i += 1) {
-    if (rs.every((r) => (r.samples[i] ?? 0) >= chosenLocked)) heldAtLocked = (i + 1) * SAMPLE;
+    if (rs.every((r) => (r.samples[i]?.ratio ?? 0) >= chosenLocked))
+      heldAtLocked = (i + 1) * SAMPLE;
     else break;
   }
   say(`N = ${heldAtLocked}`);
@@ -489,10 +483,10 @@ function main(): void {
   const unstableCandidates = [1.1, 1.2, 1.3, 1.4];
   for (const candidate of unstableCandidates) {
     const realRuns = (real.get(RHOS.unstable) as RunResult[]).map((r) =>
-      longestRunBelow(r, candidate),
+      longestRunBelow(r.samples, candidate),
     );
     const freshRuns = of("max-update freshness field", RHOS.unstable).map((r) =>
-      longestRunBelow(r, candidate),
+      longestRunBelow(r.samples, candidate),
     );
     say(`  candidate ${candidate}×: REAL longest run below (worst case) ${Math.max(...realRuns)} samples · freshness longest run below (best case, i.e. least stable) ${Math.min(...freshRuns)} samples`);
   }

@@ -12,15 +12,23 @@
 //
 // Every rho below is the one the derivation actually measured that threshold at
 // (RHO.locked for LOCKED, RHO.default for EMERGED/SWITCHED, RHO.max for
-// UNSTABLE/K — src/sim/rho.ts). spec/engine-behaviours.test.ts imports the same
-// constants now, so the rate a threshold was derived at and the rate a test
-// exercises it at cannot diverge again the way they did once already.
+// UNSTABLE/K — src/sim/rho.ts), and the schedule is spec/flow.ts, the same one
+// spec/engine-behaviours.test.ts runs. A control that ran its own copy of either
+// would not be a control.
 
 import { describe, expect, it } from "vitest";
 import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
-import { induce } from "../src/fixtures/graph.ts";
-import { shortestPathLength } from "../src/oracle/bfs.ts";
-import { reading } from "../src/sim/reading.ts";
+import { HORIZON, RHO } from "../src/sim/rho.ts";
+import { longestRunBelow } from "../src/sim/trace.ts";
+import {
+  BFS_CLOSED,
+  BFS_OPEN,
+  afterShortcut,
+  settled,
+  take,
+  traceAfterShortcut,
+} from "./flow.ts";
+import type { FlowHost } from "./flow.ts";
 import { derived } from "./thresholds.ts";
 import { MUTANTS } from "./mutants/index.ts";
 import type { Mutant } from "./mutants/index.ts";
@@ -106,43 +114,23 @@ describe("every mutant is a real engine", () => {
 
 {
   const fixture = DOUBLE_BRIDGE;
-  const SEED = 1;
-  const bfs = (openShortcut: boolean) =>
-    shortestPathLength(
-      induce(fixture, { openShortcut }),
-      fixture.nest,
-      fixture.food,
-    ) as number;
-  const BFS_CLOSED = bfs(false);
-  const BFS_OPEN = bfs(true);
 
-  const take = (mutant: Mutant, state: unknown, against: number) =>
-    reading(mutant.completedTripLengths(state), against, {
-      window: derived("N_trips"),
-      minTrips: derived("MIN_TRIPS"),
-    });
-
-  const settled = (mutant: Mutant, rho: number) => {
-    const state = mutant.create(fixture, { rho, seed: SEED });
-    for (let i = 0; i < derived("SETTLE"); i += 1) mutant.step(state);
-    return state;
-  };
-
-  const afterShortcut = (mutant: Mutant, rho: number, stepsAfter: number) => {
-    const state = settled(mutant, rho);
-    mutant.toggleShortcut(state);
-    for (let i = 0; i < stepsAfter; i += 1) mutant.step(state);
-    return state;
-  };
+  /** A mutant IS an engine; this only renames `create` to what the flow calls it. */
+  const host = (mutant: Mutant): FlowHost<unknown> => ({
+    create: (fx, options) => mutant.create(fx, options),
+    step: (state) => mutant.step(state),
+    toggleShortcut: (state) => mutant.toggleShortcut(state),
+    completedTripLengths: (state) => mutant.completedTripLengths(state),
+  });
 
   const named = (name: string) =>
-    MUTANTS.find((m) => m.name === name) as Mutant;
+    host(MUTANTS.find((m) => m.name === name) as Mutant);
 
   describe("each mutant fails the behaviour it is paired against", () => {
     it("behaviour (1) — pure random walk never gets within EMERGED of the only route", () => {
       const m = named("pure random walk");
       const target = derived("EMERGED");
-      const result = take(m, settled(m, 0.12), BFS_CLOSED);
+      const result = take(m, settled(m, RHO.default), BFS_CLOSED);
       expect(result.status).toBe("ok");
       expect(result.ratio as number).toBeGreaterThan(target);
     });
@@ -150,7 +138,11 @@ describe("every mutant is a real engine", () => {
     it("behaviour (2) — max-update freshness field does not stay LOCKED at ρ = 0", () => {
       const m = named("max-update freshness field");
       const stuck = derived("LOCKED");
-      const result = take(m, afterShortcut(m, 0, derived("N")), BFS_OPEN);
+      const result = take(
+        m,
+        afterShortcut(m, RHO.locked, derived("N")),
+        BFS_OPEN,
+      );
       expect(result.status).toBe("ok");
       expect(result.ratio as number).toBeLessThan(stuck);
     });
@@ -158,7 +150,11 @@ describe("every mutant is a real engine", () => {
     it("behaviour (2) — ρ pinned at 0.25 does not stay LOCKED even at ρ = 0", () => {
       const m = named("ρ pinned at 0.25");
       const stuck = derived("LOCKED");
-      const result = take(m, afterShortcut(m, 0, derived("N")), BFS_OPEN);
+      const result = take(
+        m,
+        afterShortcut(m, RHO.locked, derived("N")),
+        BFS_OPEN,
+      );
       expect(result.status).toBe("ok");
       expect(result.ratio as number).toBeLessThan(stuck);
     });
@@ -166,7 +162,11 @@ describe("every mutant is a real engine", () => {
     it("behaviour (3) — ρ ignored never falls below SWITCHED", () => {
       const m = named("ρ ignored");
       const target = derived("SWITCHED");
-      const result = take(m, afterShortcut(m, 0.12, derived("M")), BFS_OPEN);
+      const result = take(
+        m,
+        afterShortcut(m, RHO.default, derived("M")),
+        BFS_OPEN,
+      );
       expect(result.status).toBe("ok");
       expect(result.ratio as number).toBeGreaterThanOrEqual(target);
     });
@@ -174,18 +174,44 @@ describe("every mutant is a real engine", () => {
     it("behaviour (3) — one pheromone map never falls below SWITCHED", () => {
       const m = named("one pheromone map");
       const target = derived("SWITCHED");
-      const result = take(m, afterShortcut(m, 0.12, derived("M")), BFS_OPEN);
+      const result = take(
+        m,
+        afterShortcut(m, RHO.default, derived("M")),
+        BFS_OPEN,
+      );
       expect(result.status).toBe("ok");
       expect(result.ratio as number).toBeGreaterThanOrEqual(target);
+    });
+
+    // The freshness field is dual-role, as spec/oracles.md §3 records: it is
+    // behaviour (2)'s key control AND behaviour (4)'s, on the other side of the
+    // same claim. This assertion is what makes behaviour (4)'s test red-capable —
+    // it runs the identical schedule and the identical helper, and shows the
+    // predicate that must never hold for the real engine holding for 24 samples
+    // here. Without it, "never stabilises" would be a guard nobody had watched
+    // fail.
+    it("behaviour (4) — max-update freshness field DOES stabilise below UNSTABLE", () => {
+      const m = named("max-update freshness field");
+      const series = traceAfterShortcut(m, RHO.max, HORIZON);
+      expect(longestRunBelow(series, derived("UNSTABLE"))).toBeGreaterThanOrEqual(
+        derived("K"),
+      );
     });
   });
 
   describe("the η mutant is the one only the honesty test may catch", () => {
-    const m = named("η encodes distance to food");
+    const mutant = MUTANTS.find(
+      (m) => m.name === "η encodes distance to food",
+    ) as Mutant;
+    const m = host(mutant);
 
     it("passes behaviour (2) — it locks in at ρ = 0 just like the real engine", () => {
       const stuck = derived("LOCKED");
-      const result = take(m, afterShortcut(m, 0, derived("N")), BFS_OPEN);
+      const result = take(
+        m,
+        afterShortcut(m, RHO.locked, derived("N")),
+        BFS_OPEN,
+      );
       expect(result.status).toBe("ok");
       expect(result.ratio as number).toBeGreaterThanOrEqual(stuck);
     });
@@ -196,8 +222,8 @@ describe("every mutant is a real engine", () => {
       // goal must change an unpheromoned choice that a momentum-only η could not.
       const foodMoved = { ...fixture, food: "L4" };
       const distributionAt = (fx: typeof fixture) => {
-        const state = m.create(fx, { rho: 0, seed: 1 });
-        return m.choiceDistribution(state, fx.nest);
+        const state = mutant.create(fx, { rho: RHO.locked, seed: 1 });
+        return mutant.choiceDistribution(state, fx.nest);
       };
       const before = distributionAt(fixture);
       const after = distributionAt(foodMoved);

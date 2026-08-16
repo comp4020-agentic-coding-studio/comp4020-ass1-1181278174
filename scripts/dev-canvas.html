@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>dev canvas — engine sensor (not the page)</title>
+    <style>
+      :root {
+        --ink: #e8e6e1;
+        --dim: #8a867e;
+        --bg: #14161a;
+        --panel: #1c1f25;
+        --home: #6fd3c7;
+        --food: #f2a65a;
+        --line: #2a2f38;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+
+      h1 {
+        margin: 0 0 4px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .warn {
+        margin: 0 0 14px;
+        color: var(--dim);
+        font-size: 12px;
+      }
+
+      .frame {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 14px;
+        align-items: start;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+      }
+
+      .panel {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+      }
+
+      .reading {
+        font-size: 40px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .reading small {
+        font-size: 12px;
+        color: var(--dim);
+      }
+
+      .rows {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 10px;
+        font-size: 12px;
+        color: var(--dim);
+      }
+
+      .rows b {
+        color: var(--ink);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+
+      button {
+        padding: 6px 10px;
+        color: var(--ink);
+        background: #262b33;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #2f3540;
+      }
+
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--dim);
+      }
+
+      input[type="range"] {
+        width: 100%;
+      }
+
+      .key {
+        display: flex;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--dim);
+      }
+
+      .swatch::before {
+        content: "";
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        margin-right: 4px;
+        border-radius: 2px;
+        background: currentcolor;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>dev canvas — engine sensor</h1>
+    <p class="warn">
+      Not the page. Lives in <code>scripts/</code>, which
+      <code>vite.config.ts</code> excludes from the build, so it never reaches
+      <code>dist/</code> and the invariant tests never see it. Its only job is to
+      let the engine be looked at before slice 3 designs the real thing.
+    </p>
+
+    <div class="frame">
+      <canvas id="stage" width="1100" height="520">
+        The double-bridge fixture, drawn: pheromone on the edges and ants moving
+        between nest and food.
+      </canvas>
+
+      <div class="panel">
+        <div>
+          <div class="reading" id="reading">—</div>
+          <small id="reading-note">no reading yet</small>
+        </div>
+
+        <canvas id="strip" width="480" height="90"></canvas>
+
+        <div class="rows">
+          <span>steps</span><b id="steps">0</b> <span>trips</span
+          ><b id="trips">0</b> <span>shortcut</span><b id="shortcut">shut</b>
+          <span>vs BFS</span><b id="bfs">8</b> <span>on short</span
+          ><b id="share">—</b>
+        </div>
+
+        <label for="rho">
+          forgetting rate ρ — <b id="rho-value">0.12</b>
+        </label>
+        <input
+          id="rho"
+          type="range"
+          min="0"
+          max="0.25"
+          step="0.01"
+          value="0.12"
+        />
+
+        <div class="buttons">
+          <button id="run" type="button">pause</button>
+          <button id="reset" type="button">reset</button>
+          <button id="settle" type="button">settle 2000</button>
+          <button id="toggle" type="button">open shortcut</button>
+        </div>
+
+        <div class="key">
+          <span class="swatch" style="color: var(--home)">home trail</span>
+          <span class="swatch" style="color: var(--food)">food trail</span>
+        </div>
+        <div class="key">
+          <span class="swatch" style="color: #cfd3da">seeking</span>
+          <span class="swatch" style="color: var(--food)">carrying</span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./dev-canvas.ts"></script>
+  </body>
+</html>
