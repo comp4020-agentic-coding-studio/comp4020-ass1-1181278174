@@ -8,7 +8,7 @@
 
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { FIELD_V4, FIELD_V4_SPEC } from "../src/fixtures/field-v4.ts";
+import { FIELD_V4 } from "../src/fixtures/field-v4.ts";
 import type { Colony } from "../src/sim/engine.ts";
 import * as engine from "../src/sim/engine.ts";
 import { FIELD_RHO } from "../src/sim/rho.ts";

@@ -197,12 +197,12 @@ describe("the core interaction — draw a wall, and the reading follows", () => 
 
   it("counts the walls and offers to clear them", () => {
     const page = mount();
-    expect(page.text("share")).toBe("walls drawn: 0");
+    expect(page.text("share")).toBe("walls: 0");
     page.page.toggleCell("30,20");
     page.page.toggleCell("30,21");
-    expect(page.text("share")).toBe("walls drawn: 2");
+    expect(page.text("share")).toBe("walls: 2");
     (page.doc.getElementById("clear") as HTMLButtonElement).click();
-    expect(page.text("share")).toBe("walls drawn: 0");
+    expect(page.text("share")).toBe("walls: 0");
     page.destroy();
   });
 
@@ -211,7 +211,7 @@ describe("the core interaction — draw a wall, and the reading follows", () => 
     const page = mount();
     page.page.toggleCell("30,20");
     (page.doc.getElementById("reset") as HTMLButtonElement).click();
-    expect(page.text("share")).toBe("walls drawn: 1");
+    expect(page.text("share")).toBe("walls: 1");
     expect(page.page.colony().drawnWalls.has("30,20")).toBe(true);
     expect(page.page.colony().steps).toBe(0);
     page.destroy();
@@ -223,19 +223,19 @@ describe("the keyboard reaches the verb", () => {
     const page = mount();
     // No cursor until the keyboard asks for one — a pointer user never sees it.
     page.key("Enter");
-    expect(page.text("share")).toBe("walls drawn: 0");
+    expect(page.text("share")).toBe("walls: 0");
 
     page.key("ArrowRight");
     page.key("ArrowRight");
     page.key("Enter");
-    expect(page.text("share")).toBe("walls drawn: 1");
+    expect(page.text("share")).toBe("walls: 1");
 
     page.key("Enter"); // the same cell again rubs it out
-    expect(page.text("share")).toBe("walls drawn: 0");
+    expect(page.text("share")).toBe("walls: 0");
 
     page.key("Escape");
     page.key("Enter"); // with the cursor away, Enter only brings it back
-    expect(page.text("share")).toBe("walls drawn: 0");
+    expect(page.text("share")).toBe("walls: 0");
     page.destroy();
   });
 

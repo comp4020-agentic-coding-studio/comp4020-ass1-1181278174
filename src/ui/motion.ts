@@ -14,18 +14,19 @@
 // transition or animation under the same query, so that stays true by force.
 
 export interface MotionPlan {
-  /** Beat 1 is live emergence, so the default is to start. Not under reduce. */
-  readonly autoplay: boolean;
+  /**
+   * Nobody autoplays any more (Decision 26): the page loads paused for every
+   * visitor and Run is the way in. Kept as a field so the tests can assert it.
+   */
+  readonly autoplay: false;
   /** Repaints per second; `undefined` means every frame. Steps are unaffected. */
   readonly rendersPerSecond: number | undefined;
-  /** The way in, when nothing autoplays: an explicit "watch it grow". */
-  readonly needsStartButton: boolean;
 }
 
 export function motionPlan(reducedMotion: boolean): MotionPlan {
   return reducedMotion
-    ? { autoplay: false, rendersPerSecond: 4, needsStartButton: true }
-    : { autoplay: true, rendersPerSecond: undefined, needsStartButton: false };
+    ? { autoplay: false, rendersPerSecond: 4 }
+    : { autoplay: false, rendersPerSecond: undefined };
 }
 
 /** Reads the preference, defaulting to "not reduced" where it cannot be asked. */

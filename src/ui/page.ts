@@ -7,9 +7,10 @@
 // spec/reduced-motion.test.ts drives the real page against the real markup in
 // jsdom, without a browser and without waiting.
 //
-// Three controls, hard cap (PLAN.md): the one verb, the forgetting rate,
-// run/pause/reset. "Watch it grow" is not a fourth — it is the run control under
-// a preference that forbids autoplay, and it is absent otherwise.
+// Five controls (PLAN.md, Decision 26): the scene, the one verb (drawing walls),
+// the forgetting rate, the speed, and run/pause/reset. The page loads PAUSED for
+// everyone — nothing moves until the visitor presses Run — so the reduced-motion
+// branch and the ordinary one differ only in how often the canvas repaints.
 
 import type { Fixture, NodeId } from "../fixtures/double-bridge.ts";
 import { induce } from "../fixtures/graph.ts";
@@ -19,6 +20,8 @@ import * as engine from "../sim/engine.ts";
 import type { Reading } from "../sim/reading.ts";
 import { READING_WINDOW, reading } from "../sim/reading.ts";
 import { FIELD_RHO, SAMPLE } from "../sim/rho.ts";
+import { sceneWalls } from "../fixtures/presets.ts";
+import type { SceneKind } from "../fixtures/presets.ts";
 import { createCanvasView } from "./canvas.ts";
 import { createLoop } from "./loop.ts";
 import type { Loop } from "./loop.ts";
@@ -40,11 +43,12 @@ import { createStripView } from "./strip.ts";
 export const STEPS_PER_SECOND = 150;
 
 /**
- * The three paces the visitor can pick (Decision 25). Only the pace changes:
- * the engine is fixed-step, so the same step count gives the same colony at any
- * of them — 75 is for watching an individual ant, 300 for watching the road.
+ * The pace the visitor can set (Decision 26): a slider from 30 to 300 steps a
+ * second, default 150. Only the pace changes: the engine is fixed-step, so the
+ * same step count gives the same colony at any of them — slow is for watching an
+ * individual ant, fast for watching the road.
  */
-export const SPEEDS = [75, 150, 300] as const;
+export const SPEED = { min: 30, max: 300, step: 10, default: 150 } as const;
 /** An aria-live region that fires every frame says nothing. One update a second. */
 const ANNOUNCE_MS = 1000;
 /** Decision 19. Four hundred, so the visitor sees them pour out of the nest. */
@@ -73,6 +77,8 @@ export interface Prime {
    */
   readonly wall?: string;
   readonly rho?: number;
+  /** A scene to lay out before anything runs — the same walls the buttons draw. */
+  readonly scene?: SceneKind;
 }
 
 export interface Page {
@@ -84,6 +90,9 @@ export interface Page {
   toggleCell(node: NodeId): boolean;
   setSpeed(rate: number): void;
   setRho(value: number): void;
+  /** Lay out a scene: a fresh colony on the same field, with that scene's walls. */
+  setScene(kind: SceneKind): void;
+  scene(): SceneKind;
   destroy(): void;
 }
 
@@ -101,18 +110,25 @@ export function readPrime(search: string): Prime | undefined {
     return raw === null || Number.isNaN(value) ? undefined : value;
   };
   const wall = params.get("wall") ?? undefined;
+  const sceneRaw = params.get("scene");
+  const scene: SceneKind | undefined =
+    sceneRaw === "maze" || sceneRaw === "random" || sceneRaw === "blank"
+      ? sceneRaw
+      : undefined;
   const prime: Prime = {
     steps: num("steps"),
     open: params.has("open"),
     after: num("after"),
     wall,
     rho: num("rho"),
+    scene,
   };
   return prime.steps === undefined &&
     !prime.open &&
     prime.after === undefined &&
     prime.rho === undefined &&
-    wall === undefined
+    wall === undefined &&
+    scene === undefined
     ? undefined
     : prime;
 }
@@ -130,11 +146,14 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   const share = el("share");
   const runButton = el<HTMLButtonElement>("run");
   const resetButton = el<HTMLButtonElement>("reset");
-  const growButton = el<HTMLButtonElement>("grow");
   const clearButton = el<HTMLButtonElement>("clear");
-  const speedInputs = SPEEDS.map((rate) =>
-    el<HTMLInputElement>(`speed-${rate}`),
-  );
+  const speedInput = el<HTMLInputElement>("speed");
+  const speedValue = el("speed-value");
+  const sceneButtons: Record<SceneKind, HTMLButtonElement> = {
+    blank: el<HTMLButtonElement>("scene-blank"),
+    random: el<HTMLButtonElement>("scene-random"),
+    maze: el<HTMLButtonElement>("scene-maze"),
+  };
 
   const plan = motionPlan(deps.reducedMotion);
   const { fixture } = deps;
@@ -142,6 +161,9 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   let rho: number = deps.prime?.rho ?? FIELD_RHO.default;
   let colony = engine.createColony(fixture, { rho, seed: 1, ants: ANTS });
   let series: Reading[] = [];
+  let sceneKind: SceneKind = "blank";
+  /** Each press of "Random obstacles" is a new scatter — and the same press again is not. */
+  let randomSeed = 0;
   let openedAtSample: number | null = null;
   let announcedAt = -Infinity;
 
@@ -203,7 +225,7 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     // Secondary readout, never thresholded. On open ground the thing worth
     // counting is what the VISITOR has added, not which of two routes was taken
     // — there is only one kind of route now. Turn B makes this number move.
-    share.textContent = `walls drawn: ${colony.drawnWalls.size}`;
+    share.textContent = `walls: ${colony.drawnWalls.size}`;
     clearButton.hidden = colony.drawnWalls.size === 0;
 
     // Throttled: the region is polite, but a number that changes 60 times a
@@ -264,6 +286,28 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     refreshTerrain();
     render();
     return true;
+  }
+
+  /**
+   * A scene is a fresh colony on the same field with a set of walls drawn before
+   * the ants set out — the same cells, drawn by the same verb, that the visitor
+   * could draw by hand. Choosing one restarts the ants; whether they are running
+   * is left as it was.
+   */
+  function setScene(kind: SceneKind): void {
+    if (kind === "random") randomSeed += 1;
+    sceneKind = kind;
+    colony = engine.createColony(fixture, { rho, seed: 1, ants: ANTS });
+    for (const cell of sceneWalls(fixture, kind, randomSeed)) {
+      engine.toggleCell(colony, cell);
+    }
+    series = [];
+    openedAtSample = null;
+    for (const [name, button] of Object.entries(sceneButtons)) {
+      button.setAttribute("aria-pressed", String(name === kind));
+    }
+    refreshTerrain();
+    render();
   }
 
   const loop = createLoop({
@@ -345,30 +389,34 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   };
 
   const onClearClick = (): void => {
-    for (const cell of [...colony.drawnWalls]) engine.toggleCell(colony, cell);
+    // A copy: toggleCell mutates the set being walked.
+    for (const cell of Array.from(colony.drawnWalls)) engine.toggleCell(colony, cell);
+    // With every wall gone the scene IS blank, whatever it was called before.
+    sceneKind = "blank";
+    for (const [name, button] of Object.entries(sceneButtons)) {
+      button.setAttribute("aria-pressed", String(name === "blank"));
+    }
     refreshTerrain();
     render();
   };
 
   function setSpeed(rate: number): void {
-    loop.setStepsPerSecond(rate);
-    for (const input of speedInputs) {
-      input.checked = Number(input.value) === rate;
-    }
+    const clamped = Math.min(SPEED.max, Math.max(SPEED.min, rate));
+    loop.setStepsPerSecond(clamped);
+    speedInput.value = String(clamped);
+    speedValue.textContent = String(clamped);
+    speedInput.setAttribute("aria-valuetext", `${clamped} steps per second`);
   }
-  const onSpeedChange = (event: Event): void => {
-    setSpeed(Number((event.currentTarget as HTMLInputElement).value));
+  const onSpeedInput = (): void => setSpeed(Number(speedInput.value));
+  const onSceneClick = (event: Event): void => {
+    const target = event.currentTarget as HTMLButtonElement;
+    const kind = target.id.replace("scene-", "") as SceneKind;
+    setScene(kind);
   };
 
   const onRhoInput = (): void => setRho(Number(rhoInput.value));
   const onRunClick = (): void => setRunning(!loop.running);
   const onResetClick = (): void => reset();
-  const onGrowClick = (): void => {
-    // Under reduced motion nothing autoplays, so this is the way in. It starts
-    // the same loop at the same step rate — only the repaint cadence differs.
-    setRunning(true);
-    growButton.hidden = true;
-  };
 
   stage.addEventListener("pointerdown", onStagePointerDown as EventListener);
   stage.addEventListener("pointermove", onStagePointerMove as EventListener);
@@ -376,22 +424,26 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   stage.addEventListener("pointercancel", onStagePointerUp);
   stage.addEventListener("keydown", onStageKeyDown as EventListener);
   clearButton.addEventListener("click", onClearClick);
-  for (const input of speedInputs) {
-    input.addEventListener("change", onSpeedChange as EventListener);
+  speedInput.addEventListener("input", onSpeedInput);
+  for (const button of Object.values(sceneButtons)) {
+    button.addEventListener("click", onSceneClick);
   }
   rhoInput.addEventListener("input", onRhoInput);
   runButton.addEventListener("click", onRunClick);
   resetButton.addEventListener("click", onResetClick);
-  growButton.addEventListener("click", onGrowClick);
 
   rhoInput.min = String(FIELD_RHO.locked);
   rhoInput.max = String(FIELD_RHO.max);
   rhoInput.step = String(FIELD_RHO.step);
   setRho(rho);
-  growButton.hidden = !plan.needsStartButton;
+  speedInput.min = String(SPEED.min);
+  speedInput.max = String(SPEED.max);
+  speedInput.step = String(SPEED.step);
   setSpeed(STEPS_PER_SECOND);
+  sceneButtons.blank.setAttribute("aria-pressed", "true");
 
   if (deps.prime) {
+    if (deps.prime.scene) setScene(deps.prime.scene);
     for (let i = 0; i < (deps.prime.steps ?? 0); i += 1) step();
     if (deps.prime.open) toggleShortcut();
     const bar = /^(\d+):(\d+)-(\d+)$/.exec(deps.prime.wall ?? "");
@@ -405,7 +457,10 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   }
 
   render();
-  setRunning(plan.autoplay);
+  // Paused, for everyone (Decision 26). Beat 1 is still live emergence from zero
+  // — it just waits for the visitor to press Run, so they can pick a scene or
+  // draw first, and so nothing moves on a page that was only being read.
+  setRunning(false);
 
   return {
     loop,
@@ -415,6 +470,8 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     toggleCell,
     setSpeed,
     setRho,
+    setScene,
+    scene: () => sceneKind,
     destroy() {
       loop.stop();
       canvas.dispose();
@@ -424,13 +481,13 @@ export function createPage(doc: Document, deps: PageDeps): Page {
       stage.removeEventListener("pointercancel", onStagePointerUp);
       stage.removeEventListener("keydown", onStageKeyDown as EventListener);
       clearButton.removeEventListener("click", onClearClick);
-      for (const input of speedInputs) {
-        input.removeEventListener("change", onSpeedChange as EventListener);
+      speedInput.removeEventListener("input", onSpeedInput);
+      for (const button of Object.values(sceneButtons)) {
+        button.removeEventListener("click", onSceneClick);
       }
       rhoInput.removeEventListener("input", onRhoInput);
       runButton.removeEventListener("click", onRunClick);
       resetButton.removeEventListener("click", onResetClick);
-      growButton.removeEventListener("click", onGrowClick);
     },
   };
 }

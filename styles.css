@@ -210,7 +210,8 @@ button[aria-pressed="true"] {
   font-variant-numeric: tabular-nums;
 }
 
-#rho {
+#rho,
+#speed {
   width: 100%;
   margin: 6px 0 2px;
   accent-color: var(--focus);
@@ -322,4 +323,25 @@ button[aria-pressed="true"] {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* Scene: three buttons, one pressed. The pressed one is drawn as the pressed
+   run/pause button is, so "on" means the same thing everywhere on the page. */
+.scene {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.scene-label {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.scene button[aria-pressed="true"] {
+  border-color: var(--accent, #c2410c);
+  box-shadow: inset 0 0 0 1px var(--accent, #c2410c);
 }

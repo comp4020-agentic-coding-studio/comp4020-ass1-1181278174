@@ -40,11 +40,17 @@ const STATES = [
   // headless gives a page only a handful of rAF frames however long the virtual
   // time budget, so an unprimed still shows a fraction of what a real browser
   // runs in the same wall time.
+  // The blank scene (Decision 26): the page loads on it, paused, and these are
+  // what the visitor sees after pressing Run.
   { suffix: "-4s", query: "?steps=600" },
   { suffix: "-10s", query: "?steps=1500" },
   { suffix: "-20s", query: "?steps=3000" },
+  // The other two scenes, twenty and forty seconds in. `?scene=` lays out the
+  // same walls the Scene buttons draw, before the first step.
+  { suffix: "-random-20s", query: "?scene=random&steps=3000" },
+  { suffix: "-maze-40s", query: "?scene=maze&steps=6000" },
   // The road broken and reconnecting: settle 20 s, drop an 11-cell bar across
-  // the corridor, then run 10 s more. The verb is a drag and a still cannot
+  // the straight line, then run 10 s more. The verb is a drag and a still cannot
   // drag, so the page's `?wall=x:y0-y1` prime builds exactly the cells a
   // visitor would build by hand.
   { suffix: "-broken", query: "?steps=3000&wall=30:15-25&after=1500" },

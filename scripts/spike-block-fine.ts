@@ -126,7 +126,7 @@ function main(): void {
   say(`|---|---|---|---|---|---|---|---|---|---|`);
   const keepMaps: { rho: number; maps: string[] }[] = [];
   for (const rho of RHOS) {
-    const runs = SEEDS.map((seed, i) => run(rho, seed, false));
+    const runs = SEEDS.map((seed) => run(rho, seed, false));
     const m = (f: (r: Result) => number) => median(runs.map(f));
     say(`| ${rho} | ${fmt(m((r) => r.before))}× | ${m((r) => r.tripsBefore)} | ${m((r) => r.trapped)} | ${st(m((r) => r.first65))} | ${fmt(m((r) => r.at2000))}× | ${fmt(m((r) => r.at6000))}× | ${fmt(m((r) => r.atEnd))}× | ${st(m((r) => r.healed))} | ${m((r) => r.postTrips)} |`);
     const withMaps = runs.find((r) => r.maps.length > 0);

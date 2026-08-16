@@ -6,9 +6,29 @@ clamps the viewport to 526 CSS px and crops, which produced a "broken phone
 layout" here that was not broken at all. See "Facts about this repo that bite" in
 `CLAUDE.md`.
 
-The primed states below are reached with the page's `?steps=&open&after=&rho=`
-prime. Every one is a state the controls produce by hand; a still cannot tap, and
-without it no screenshot could evidence the trace tick at all.
+The primed states below are reached with the page's `?steps=&scene=&wall=&after=`
+prime. Every one is a state the controls produce by hand; a still cannot press Run
+or drag, and without the prime no screenshot could evidence anything but a paused
+blank field.
+
+## Current — Decision 26: paused start, three scenes, speed slider
+
+The page loads paused on the blank scene. Each state below is what the visitor
+sees after pressing Run (150 steps/s):
+
+- **blank, 4 s / 10 s / 20 s** — the pour-out, the search, the straight road:
+  [1920 4s](./2026-08-17-page-1920-4s.png) · [10s](./2026-08-17-page-1920-10s.png) ·
+  [20s](./2026-08-17-page-1920-20s.png) · [390 4s](./2026-08-17-page-390-4s.png) ·
+  [10s](./2026-08-17-page-390-10s.png) · [20s](./2026-08-17-page-390-20s.png)
+- **random obstacles, 20 s** — 28 seeded blocks, the road threading them:
+  [1920](./2026-08-17-page-1920-random-20s.png) · [390](./2026-08-17-page-390-random-20s.png)
+- **maze, 40 s** — three barriers, a road that bends twice through them:
+  [1920](./2026-08-17-page-1920-maze-40s.png) · [390](./2026-08-17-page-390-maze-40s.png)
+- **broken** — settle 20 s, an 11-cell bar across the road (`?wall=30:15-25`),
+  10 s more: the colony reconnecting round it:
+  [1920](./2026-08-17-page-1920-broken.png) · [390](./2026-08-17-page-390-broken.png)
+
+Older sections below describe earlier fixtures and are kept as history.
 
 ## Slice 4 — controls, keyboard, reduced motion
 

@@ -23,7 +23,7 @@
       <canvas
         id="stage"
         tabindex="0"
-        aria-label="Open ground scattered with small solid blocks. A blue disc on the left is the nest, a green disc on the right is the food. Four hundred ants move between them — black while searching, red while carrying food — and the scent they leave marks the ground they use. Drag across the field to build a wall, and drag along a wall to rub it out. From the keyboard: arrow keys move a cursor, Enter builds or removes a wall there, Escape hides the cursor."
+        aria-label="Open ground. A blue disc on the left is the nest, a green disc on the right is the food. The Scene buttons lay out nothing, a scatter of small blocks, or a maze with several ways through. Four hundred ants move between them — black while searching, red while carrying food — and the scent they leave marks the ground they use. Drag across the field to build a wall, and drag along a wall to rub it out. From the keyboard: arrow keys move a cursor, Enter builds or removes a wall there, Escape hides the cursor."
       ></canvas>
 
       <ul class="legend" aria-label="What you are looking at">
@@ -39,7 +39,7 @@
       <section id="reading" class="readout">
         <p id="readout" class="number" aria-live="polite">no reading yet</p>
         <p id="readout-note" class="note">warming up</p>
-        <p id="share" class="note secondary">walls drawn: 0</p>
+        <p id="share" class="note secondary">walls: 0</p>
         <canvas
           id="strip"
           class="strip"
@@ -49,6 +49,13 @@
       </section>
 
       <section class="controls" aria-label="Controls">
+        <div class="scene" role="group" aria-label="Scene">
+          <span class="scene-label">Scene</span>
+          <button id="scene-blank" type="button" aria-pressed="true">Blank — draw your own</button>
+          <button id="scene-random" type="button" aria-pressed="false">Random obstacles</button>
+          <button id="scene-maze" type="button" aria-pressed="false">Maze</button>
+        </div>
+
         <div class="slider">
           <label for="rho">Forgetting rate — <b id="rho-value">0.020</b></label>
           <input id="rho" type="range" min="0" max="0.05" step="0.001" value="0.02" />
@@ -57,20 +64,18 @@
           </div>
         </div>
 
-        <fieldset class="speed">
-          <legend>Speed — steps per second</legend>
-          <label><input id="speed-75" type="radio" name="speed" value="75" />75</label>
-          <label
-            ><input id="speed-150" type="radio" name="speed" value="150" checked />150</label
-          >
-          <label><input id="speed-300" type="radio" name="speed" value="300" />300</label>
-        </fieldset>
+        <div class="slider">
+          <label for="speed">Speed — <b id="speed-value">150</b> steps per second</label>
+          <input id="speed" type="range" min="30" max="300" step="10" value="150" />
+          <div class="ends" aria-hidden="true">
+            <span>slow</span><span>fast</span>
+          </div>
+        </div>
 
         <div class="buttons">
           <button id="clear" type="button" hidden>Clear walls</button>
-          <button id="run" type="button" aria-pressed="false">Pause</button>
+          <button id="run" type="button" aria-pressed="true">Run</button>
           <button id="reset" type="button">Reset</button>
-          <button id="grow" type="button" hidden>Watch it grow</button>
         </div>
       </section>
       </div>
