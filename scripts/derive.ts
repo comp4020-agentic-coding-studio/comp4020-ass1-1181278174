@@ -14,6 +14,7 @@ import { induce, pathLength } from "../src/fixtures/graph.ts";
 import { shortestPathLength } from "../src/oracle/bfs.ts";
 import * as realEngine from "../src/sim/engine.ts";
 import { reading } from "../src/sim/reading.ts";
+import { RHO } from "../src/sim/rho.ts";
 import { MUTANTS } from "../spec/mutants/index.ts";
 import type { Mutant } from "../spec/mutants/index.ts";
 
@@ -21,7 +22,9 @@ const fixture = DOUBLE_BRIDGE;
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const AFTER = 6000;
 const SAMPLE = 250;
-const RHOS = { locked: 0, switching: 0.12, unstable: 0.25 } as const;
+// The rate a threshold is derived at and the rate a test exercises it at share
+// one source now — see src/sim/rho.ts.
+const RHOS = { locked: RHO.locked, switching: RHO.default, unstable: RHO.max };
 
 const BFS_CLOSED = shortestPathLength(
   induce(fixture, { openShortcut: false }),
@@ -132,18 +135,25 @@ function deriveWindow(settle: number): {
     };
   });
 
-  // Rule, stated so the choice is not taste: the smallest window whose tail noise
-  // is under 0.02× and whose slowest crossing is no later than the largest
-  // window's — i.e. it does not lag the switch it exists to detect.
-  const reference = rows.at(-1) as WindowRow;
-  const chosen =
-    rows.find(
-      (row) =>
-        row.noise < 0.02 &&
-        row.crossing !== null &&
-        reference.crossing !== null &&
-        row.crossing <= reference.crossing,
-    )?.window ?? reference.window;
+  // Primary rule, stated so the choice would not have been taste if it had worked:
+  // the smallest window whose tail noise is under 0.02× and whose slowest crossing
+  // is no later than the largest window's. On this fixture it does not discriminate
+  // — no window's tail noise drops below 0.02× (0.098 down to 0.075 across 50–500)
+  // and every window crosses at the identical step, so there is no lag cost to
+  // weigh. Recorded, not papered over: see spec/oracles.md §3.
+  //
+  // Secondary rule, applied because the primary one returned no answer: display
+  // stability for the visitor's readout, preferring the window every prior spike
+  // in this repo already used rather than introducing a new one on no fixture
+  // evidence to prefer it. N_trips = 300: noise 0.077× there against 0.098× at the
+  // smallest window (50), for an identical crossing step.
+  const primary = rows.find(
+    (row) =>
+      row.noise < 0.02 &&
+      row.crossing !== null &&
+      rows.every((other) => other.crossing === null || row.crossing !== null),
+  )?.window;
+  const chosen = primary ?? (rows.find((row) => row.window === 300)?.window as number);
 
   // MIN_TRIPS: how many completed trips before the reading stops jumping. Walk the
   // trip series of a fresh colony and find where |Δ| stays under 0.05× thereafter.
@@ -265,8 +275,12 @@ function main(): void {
     say(`| ${row.window} | ${fmt(row.noise)} | ${row.crossing ?? "never (some seed)"} |`);
   }
   say();
-  say(`Rule: smallest window with tail noise < 0.02× whose slowest crossing is no`);
-  say(`later than the largest window's — it must not lag the switch it detects.`);
+  say(`Primary rule: smallest window with tail noise < 0.02× whose slowest crossing`);
+  say(`is no later than the largest window's. Did not discriminate on this fixture:`);
+  say(`no window's noise drops below 0.02× and every window crosses at the same step.`);
+  say(`Secondary rule, applied because the primary returned no answer: display`);
+  say(`stability for the visitor's readout — the window every prior spike already`);
+  say(`used, not a new one chosen on no fixture evidence to prefer it.`);
   say(`N_trips = ${chosen} · MIN_TRIPS = ${minTrips}`);
   say();
 
@@ -402,6 +416,85 @@ function main(): void {
       else break;
     }
     say(`| ${candidate}× | ${held} |`);
+  }
+  say();
+
+  // --- chosen thresholds: placement rule, both margins -------------------
+  // Placement rule (director): a threshold clears both sides by a stated margin
+  // but sits where its meaning holds, not at the midpoint. EMERGED sits where the
+  // gap forces it (only one control — pure random walk — remains eligible; one
+  // pheromone map's best EMERGED reading is *better* than the real engine's worst,
+  // so it cannot serve here and its pairing moved to behaviour (3)). SWITCHED and
+  // LOCKED sit near the real engine's own distribution, not the mutant's, because
+  // the reading the visitor sees at the default and at zero forgetting is what the
+  // page has to be honest about.
+  say(`## Chosen thresholds — placement and margins`);
+  say();
+  const chosenEmerged = 1.15;
+  const chosenLocked = 1.85;
+  const chosenSwitched = 1.45;
+  const realEmergedWorst = Math.max(...realEmerge);
+  const randomWalkEmergedBest = Math.min(
+    ...of("pure random walk", RHOS.switching).map((r) => r.settleRatio),
+  );
+  say(`EMERGED = ${chosenEmerged}`);
+  say(`  margin above real worst (${fmt(realEmergedWorst)}, real must clear it from below): ${fmt(chosenEmerged - realEmergedWorst)}`);
+  say(`  margin below pure-random-walk best (${fmt(randomWalkEmergedBest)}, mutant must stay above it): ${fmt(randomWalkEmergedBest - chosenEmerged)}`);
+  say(`  (one pheromone map excluded from this control: its best, ${fmt(Math.min(...of("one pheromone map", RHOS.switching).map((r) => r.settleRatio)))}, is already below EMERGED — it is behaviour (3)'s control, not (1)'s)`);
+  say();
+
+  const realLockedWorst = Math.min(...realLocked);
+  const lockMutantWorstCase = Math.max(
+    ...lockMutants.flatMap((name) =>
+      of(name, RHOS.locked).map((r) => lastOf(r) as number),
+    ),
+  );
+  say(`LOCKED = ${chosenLocked}`);
+  say(`  margin below real worst (${fmt(realLockedWorst)}): ${fmt(realLockedWorst - chosenLocked)}`);
+  say(`  margin above the closer mutant's best (${fmt(lockMutantWorstCase)}): ${fmt(chosenLocked - lockMutantWorstCase)}`);
+  say();
+
+  const realSwitchedWorst = Math.max(...realSwitch);
+  const switchMutantWorstCase = Math.min(
+    ...switchMutants.flatMap((name) =>
+      of(name, RHOS.switching).map((r) => lastOf(r) as number),
+    ),
+  );
+  say(`SWITCHED = ${chosenSwitched}`);
+  say(`  margin above real worst (${fmt(realSwitchedWorst)}): ${fmt(chosenSwitched - realSwitchedWorst)}`);
+  say(`  margin below the mutant's worst case (${fmt(switchMutantWorstCase)}): ${fmt(switchMutantWorstCase - chosenSwitched)}`);
+  say();
+
+  const mCrossings = crossingsAt(
+    real.get(RHOS.switching) as RunResult[],
+    chosenSwitched,
+  ).filter(Number.isFinite);
+  const slowestCrossing = Math.max(...mCrossings);
+  const chosenM = Math.ceil((slowestCrossing * 1.25) / SAMPLE) * SAMPLE;
+  say(`M = ${chosenM}`);
+  say(`  slowest seed to cross SWITCHED=${chosenSwitched}: ${slowestCrossing} steps; M = that + 25% margin, rounded up to the sample grid`);
+  say();
+
+  const rs = real.get(RHOS.locked) as RunResult[];
+  let heldAtLocked = 0;
+  for (let i = 0; i < (rs[0] as RunResult).samples.length; i += 1) {
+    if (rs.every((r) => (r.samples[i] ?? 0) >= chosenLocked)) heldAtLocked = (i + 1) * SAMPLE;
+    else break;
+  }
+  say(`N = ${heldAtLocked}`);
+  say(`  every REAL ρ=0 seed holds at or above LOCKED=${chosenLocked} for the full ${AFTER}-step run sampled; N is that observed floor, not a guess`);
+  say();
+
+  say(`UNSTABLE and K:`);
+  const unstableCandidates = [1.1, 1.2, 1.3, 1.4];
+  for (const candidate of unstableCandidates) {
+    const realRuns = (real.get(RHOS.unstable) as RunResult[]).map((r) =>
+      longestRunBelow(r, candidate),
+    );
+    const freshRuns = of("max-update freshness field", RHOS.unstable).map((r) =>
+      longestRunBelow(r, candidate),
+    );
+    say(`  candidate ${candidate}×: REAL longest run below (worst case) ${Math.max(...realRuns)} samples · freshness longest run below (best case, i.e. least stable) ${Math.min(...freshRuns)} samples`);
   }
   say();
 

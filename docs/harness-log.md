@@ -131,3 +131,84 @@ decoration.
 
 **Citation.** This commit — `spec/harness-sync.test.ts` (new), `CLAUDE.md` (the
 marker convention and six marked clauses), `TASKS.md` (slice 0, last item).
+
+### 2026-08-17 — the freshness mutant needed a reason to switch, not just a reason to forget
+
+**What happened.** Checkpoint C's derivation surfaced four separations that
+were either vacuous or mispaired. The freshness-field mutant argmaxed with zero
+exploration, so on a fixture where every choice value starts at zero it could
+never discover the shortcut existed — LOCKED and UNSTABLE/K "separated" only
+because something that cannot look for the short path also cannot be shown
+failing to hold the long one under duress. The one-pheromone-map mutant was
+paired against behaviour (1) despite emerging a near-shortest path just fine,
+which made it a false negative left where it was. And N_trips's derivation rule
+was written before it was run, stating a criterion (smallest window, low tail
+noise, no crossing lag) that turned out not to discriminate across 50–500 trips
+on this fixture at all.
+
+**What I did instead of the obvious thing.** The obvious fix for the freshness
+mutant would have been to lower LOCKED and UNSTABLE until the vacuous
+separation looked like a real one. Instead ε-greedy exploration (ε = 0.06, the
+value the director's own prior spike used) was added to the mutant itself, so
+it is a genuine max-update model rather than a model that happens never to
+update — argmax with probability 0.94, uniform over open edges with
+probability 0.06. One-pheromone-map moved to behaviour (3)'s pairing, where its
+actual failure mode (seeker and carrier signal conflated into one trail,
+unreliable switching) actually lives. N_trips's rule was rewritten to say what
+happened — the primary criterion returned no answer on this fixture, so the
+secondary criterion (display stability, the window every prior spike already
+used) decided it — rather than leave a rule on record that the run itself
+contradicted.
+
+**How I knew it was right.** Rerunning `pnpm derive` after the ε-greedy fix
+showed LOCKED and UNSTABLE/K separating on real behaviour: the freshness field
+now finds and holds the shortcut at ρ = 0, where the real engine stays locked
+(worst 2.000 vs. freshness best 1.047), and destabilises under forgetting where
+the real engine's longest run below any UNSTABLE candidate stays at 0–1 samples
+against the freshness field's 24. The re-pairing is checkable against the
+EMERGED table directly: one-pheromone-map's best settle ratio (1.037) is
+already below EMERGED (1.15), so it was never a legitimate control for
+behaviour (1) — it belongs to (3), where its worst switched-reading is what
+actually fails to clear SWITCHED.
+
+**Citation.** This commit — `spec/mutants/freshness.ts`, `spec/mutants/index.ts`,
+`scripts/derive.ts`, `spec/oracles.md` §3, `spec/thresholds.ts`,
+`docs/spikes/2026-08-17-derivation.md`.
+
+### 2026-08-17 — the SWITCHED test read the real engine at the wrong rate, and threshold-vs-test drift got a shared source
+
+**What happened.** `pnpm check` went red on behaviour (3) once the thresholds
+above were derived: `spec/engine-behaviours.test.ts` hardcoded ρ = 0.05 for
+behaviours (1) and (3), left over from before Decision 11 fixed the slider's
+default at 0.12. `scripts/derive.ts` correctly derived EMERGED, SWITCHED and M
+at 0.12 — the actual default — so the test was asserting SWITCHED (1.45)
+against a rate that the fine sweep already on record in `spec/oracles.md`
+shows locks in (ρ ≤ 0.08), not switches. The reading of 1.953× is what a locked
+colony gives; the engine was never wrong, the test was asking it the wrong
+question. Behaviour (4) carried the same class of bug already, hardcoding
+ρ = 1, which Decision 11 explicitly rules out ("never at ρ = 1, which is off
+the control") — it stayed green only because its assertion is loose enough
+for a degenerate run to pass by accident.
+
+**What I did instead of the obvious thing.** The obvious fix was to change
+0.05 to 0.12 and 1 to 0.25 in place, in the one file that was red. Instead both
+rates moved into a new `src/sim/rho.ts` — `RHO = { locked, default, max }`,
+with the Decision 11 citation in the comment — and `scripts/derive.ts` and
+`spec/engine-behaviours.test.ts` both import it rather than each holding their
+own copy. This is the same drift class `spec/harness-sync.test.ts` exists for,
+except numeric rather than textual: two copies of one fact — the rate a
+threshold means something at — drifting apart, except a hardcoded number can
+drift silently where a prose clause at least fails a string match. Placed in
+`src/sim/` rather than `src/sim/params.ts` because it is not an engine
+constant: the UI's forgetting slider will import the same `RHO.default`, so the
+control's own default position cannot drift from the rate its readings were
+actually derived at either.
+
+**How I knew it was right.** `pnpm check` after the fix: behaviours (1), (2)
+and (3) green, behaviour (4) unchanged in its own labelled-provisional state
+(now measured at `RHO.max` rather than the forbidden ρ = 1), all six mutants
+still red for cause, `harness-sync` green — full output in the evidence block
+for this commit.
+
+**Citation.** This commit — `src/sim/rho.ts` (new), `scripts/derive.ts`,
+`spec/engine-behaviours.test.ts`, `spec/mutants.test.ts` (header comment).

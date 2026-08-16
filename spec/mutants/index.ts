@@ -71,7 +71,7 @@ export const MUTANTS: readonly Mutant[] = [
   mutant(
     "max-update freshness field",
     { behaviour: 2 },
-    "always prefers the better value once seen, so it cannot lock in — the control that separates 'forgetting is the mechanism' from 'shorter paths just win'",
+    "always prefers the better value once seen (ε-greedy, ε=0.06, so it can find the shortcut at all), so it switches onto the short branch at ρ = 0 where the real engine stays locked on the long one — the control that separates 'forgetting is the mechanism' from 'shorter paths just win'",
     freshness as EngineModule<FreshColony>,
   ),
   mutant(
@@ -100,8 +100,8 @@ export const MUTANTS: readonly Mutant[] = [
   ),
   mutant(
     ONE_PHEROMONE_MAP.name,
-    { behaviour: 1 },
-    "carriers have no trail of their own to follow home, so no round trip completes reliably",
+    { behaviour: 3 },
+    "seekers and carriers read and write the same map, so the outbound and inbound signals conflate into one undifferentiated trail — it does not reliably switch onto the shortcut at the default rate, even though (surprisingly) it emerges a near-shortest path just fine, which is why it cannot be behaviour (1)'s control",
     withPolicy(ONE_PHEROMONE_MAP),
   ),
 ];

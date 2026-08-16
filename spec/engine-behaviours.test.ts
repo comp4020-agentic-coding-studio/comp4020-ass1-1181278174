@@ -12,6 +12,7 @@ import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
 import type { Colony } from "../src/sim/engine.ts";
 import { induce } from "../src/fixtures/graph.ts";
 import { shortestPathLength } from "../src/oracle/bfs.ts";
+import { RHO } from "../src/sim/rho.ts";
 import { engine, reading } from "./engine-api.ts";
 import { derived } from "./thresholds.ts";
 
@@ -56,7 +57,7 @@ describe("behaviour (1) — a near-shortest path emerges from local rules only",
     // Emergence on its own terms, measured against the 8 moves that are actually
     // there — not the switch that behaviour (3) tests. No ant has seen BFS.
     const target = derived("EMERGED");
-    const result = take(settled(0.05), BFS_CLOSED);
+    const result = take(settled(RHO.default), BFS_CLOSED);
     expect(result.status).toBe("ok");
     expect(result.ratio).toBeLessThanOrEqual(target);
   });
@@ -65,7 +66,7 @@ describe("behaviour (1) — a near-shortest path emerges from local rules only",
 describe("behaviour (2) — lock-in at forgetting = 0 (the discriminating test)", () => {
   it("stays at or above LOCKED for N steps after the shortcut opens", () => {
     const stuck = derived("LOCKED");
-    const result = take(afterShortcut(0, derived("N")), BFS_OPEN);
+    const result = take(afterShortcut(RHO.locked, derived("N")), BFS_OPEN);
     expect(result.status).toBe("ok");
     expect(result.ratio).toBeGreaterThanOrEqual(stuck);
   });
@@ -74,7 +75,7 @@ describe("behaviour (2) — lock-in at forgetting = 0 (the discriminating test)"
 describe("behaviour (3) — moderate forgetting switches within a bound", () => {
   it("falls below SWITCHED within M steps of the shortcut opening", () => {
     const target = derived("SWITCHED");
-    const result = take(afterShortcut(0.05, derived("M")), BFS_OPEN);
+    const result = take(afterShortcut(RHO.default, derived("M")), BFS_OPEN);
     expect(result.status).toBe("ok");
     expect(result.ratio).toBeLessThan(target);
   });
@@ -87,9 +88,12 @@ describe("behaviour (4) — too much forgetting never stabilises", () => {
   // builds the trace — the same series the history line plots. Left provisional and
   // labelled rather than faked green: a guard that asserts the wrong thing is worse
   // than one that is missing.
+  //
+  // RHO.max (0.25), not ρ = 1: Decision 11 rules ρ = 1 out — "off the control" —
+  // and UNSTABLE/K were derived at RHO.max (spec/oracles.md §3), not at ρ = 1.
   it("never holds below UNSTABLE for K consecutive steps", () => {
     const ceiling = derived("UNSTABLE");
-    const result = take(afterShortcut(1, derived("K")), BFS_OPEN);
+    const result = take(afterShortcut(RHO.max, derived("K")), BFS_OPEN);
     expect(result.ratio === null || result.ratio > ceiling).toBe(true);
   });
 });

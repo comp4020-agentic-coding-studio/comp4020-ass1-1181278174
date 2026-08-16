@@ -7,10 +7,17 @@
 // implements the same EngineModule surface on the same fixture and the same graph,
 // so the same behaviour tests can be pointed at it — `tsc` enforces the surface.
 //
-// Why it matters: it finds short paths beautifully and CANNOT lock in, because a
-// max-update field always prefers the better value once it has seen it. It is the
-// only control that separates "forgetting is the mechanism" from "shorter paths just
-// win", which is the whole claim.
+// Exploration: ε-greedy, ε = 0.06 — argmax of the freshness field with probability
+// 0.94, uniform over open edges with probability 0.06 (also used whenever the field
+// is all-zero, i.e. unvisited). ε = 0.06 is the value the director's prior spike
+// used; without it the field never revisits an edge once a better one is seen and
+// so can never even find a shortcut it hasn't stumbled on, which made it useless as
+// a control for anything. With it restored, this IS the max-update model as it
+// exists: it finds short paths and, once it has seen the shortcut, prefers it —
+// so at ρ = 0 it switches onto the short branch where the real engine stays locked
+// on the long one. That is the control for behaviour (2): a max-update field cannot
+// hold a worse path once a better one is known, which is exactly what "forgetting is
+// the mechanism, not shorter-paths-just-win" requires a control to disprove.
 
 import type { Fixture, NodeId } from "../../src/fixtures/double-bridge.ts";
 import { adjacencyOf } from "../../src/fixtures/graph.ts";
@@ -21,6 +28,9 @@ import { mulberry32 } from "../../src/sim/prng.ts";
 
 /** Freshness counts down from here, so a shorter route leaves a higher value. */
 const HORIZON = 1000;
+
+/** Chance of ignoring the argmax and sampling uniformly instead. */
+const EPSILON = 0.06;
 
 export interface FreshColony {
   readonly fixture: Fixture;
@@ -82,7 +92,8 @@ export function step(colony: FreshColony): void {
 
     // Follow the freshest edge, ties broken by the seeded PRNG. No accumulation,
     // no evaporation: whichever route was seen most recently and most directly
-    // wins, and it keeps winning.
+    // wins. ε-greedy keeps it able to find a route it has not yet seen, and able
+    // to move off one it has — see the file header for why that has to be here.
     let best = 0;
     let bestValue = -Infinity;
     for (let i = 0; i < choices.length; i += 1) {
@@ -92,8 +103,9 @@ export function step(colony: FreshColony): void {
         best = i;
       }
     }
+    const explore = bestValue <= 0 || colony.random() < EPSILON;
     const taken = (
-      bestValue <= 0
+      explore
         ? choices[Math.floor(colony.random() * choices.length)]
         : choices[best]
     ) as Hop;

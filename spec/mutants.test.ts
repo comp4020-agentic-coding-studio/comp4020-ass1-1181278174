@@ -6,12 +6,24 @@
 // failed the behaviour it was built to fail" rather than "it was broken".
 //
 // The paired-failure assertions — each mutant against the behaviour in its pairing —
-// need the thresholds, and the thresholds are derived by separating the real engine
-// FROM these mutants. So they arrive with the derivation, not before it.
+// needed the thresholds, and the thresholds are derived by separating the real engine
+// FROM these mutants (spec/oracles.md §3, docs/spikes/2026-08-17-derivation.md). They
+// arrive here, now that the derivation is done.
+//
+// Every rho below is the one the derivation actually measured that threshold at
+// (RHO.locked for LOCKED, RHO.default for EMERGED/SWITCHED, RHO.max for
+// UNSTABLE/K — src/sim/rho.ts). spec/engine-behaviours.test.ts imports the same
+// constants now, so the rate a threshold was derived at and the rate a test
+// exercises it at cannot diverge again the way they did once already.
 
 import { describe, expect, it } from "vitest";
 import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
+import { induce } from "../src/fixtures/graph.ts";
+import { shortestPathLength } from "../src/oracle/bfs.ts";
+import { reading } from "../src/sim/reading.ts";
+import { derived } from "./thresholds.ts";
 import { MUTANTS } from "./mutants/index.ts";
+import type { Mutant } from "./mutants/index.ts";
 
 const STEPS = 400;
 
@@ -84,3 +96,121 @@ describe("every mutant is a real engine", () => {
     });
   }
 });
+
+// --- (e) the paired-failure assertions ------------------------------------
+//
+// Each mutant, run the way the derivation actually measured it, must fail the
+// behaviour it is paired against. A mutant that quietly started passing would be
+// a regression in the harness itself: "a threshold that has never been red is not
+// a test" only holds if these stay red for cause.
+
+{
+  const fixture = DOUBLE_BRIDGE;
+  const SEED = 1;
+  const bfs = (openShortcut: boolean) =>
+    shortestPathLength(
+      induce(fixture, { openShortcut }),
+      fixture.nest,
+      fixture.food,
+    ) as number;
+  const BFS_CLOSED = bfs(false);
+  const BFS_OPEN = bfs(true);
+
+  const take = (mutant: Mutant, state: unknown, against: number) =>
+    reading(mutant.completedTripLengths(state), against, {
+      window: derived("N_trips"),
+      minTrips: derived("MIN_TRIPS"),
+    });
+
+  const settled = (mutant: Mutant, rho: number) => {
+    const state = mutant.create(fixture, { rho, seed: SEED });
+    for (let i = 0; i < derived("SETTLE"); i += 1) mutant.step(state);
+    return state;
+  };
+
+  const afterShortcut = (mutant: Mutant, rho: number, stepsAfter: number) => {
+    const state = settled(mutant, rho);
+    mutant.toggleShortcut(state);
+    for (let i = 0; i < stepsAfter; i += 1) mutant.step(state);
+    return state;
+  };
+
+  const named = (name: string) =>
+    MUTANTS.find((m) => m.name === name) as Mutant;
+
+  describe("each mutant fails the behaviour it is paired against", () => {
+    it("behaviour (1) — pure random walk never gets within EMERGED of the only route", () => {
+      const m = named("pure random walk");
+      const target = derived("EMERGED");
+      const result = take(m, settled(m, 0.12), BFS_CLOSED);
+      expect(result.status).toBe("ok");
+      expect(result.ratio as number).toBeGreaterThan(target);
+    });
+
+    it("behaviour (2) — max-update freshness field does not stay LOCKED at ρ = 0", () => {
+      const m = named("max-update freshness field");
+      const stuck = derived("LOCKED");
+      const result = take(m, afterShortcut(m, 0, derived("N")), BFS_OPEN);
+      expect(result.status).toBe("ok");
+      expect(result.ratio as number).toBeLessThan(stuck);
+    });
+
+    it("behaviour (2) — ρ pinned at 0.25 does not stay LOCKED even at ρ = 0", () => {
+      const m = named("ρ pinned at 0.25");
+      const stuck = derived("LOCKED");
+      const result = take(m, afterShortcut(m, 0, derived("N")), BFS_OPEN);
+      expect(result.status).toBe("ok");
+      expect(result.ratio as number).toBeLessThan(stuck);
+    });
+
+    it("behaviour (3) — ρ ignored never falls below SWITCHED", () => {
+      const m = named("ρ ignored");
+      const target = derived("SWITCHED");
+      const result = take(m, afterShortcut(m, 0.12, derived("M")), BFS_OPEN);
+      expect(result.status).toBe("ok");
+      expect(result.ratio as number).toBeGreaterThanOrEqual(target);
+    });
+
+    it("behaviour (3) — one pheromone map never falls below SWITCHED", () => {
+      const m = named("one pheromone map");
+      const target = derived("SWITCHED");
+      const result = take(m, afterShortcut(m, 0.12, derived("M")), BFS_OPEN);
+      expect(result.status).toBe("ok");
+      expect(result.ratio as number).toBeGreaterThanOrEqual(target);
+    });
+  });
+
+  describe("the η mutant is the one only the honesty test may catch", () => {
+    const m = named("η encodes distance to food");
+
+    it("passes behaviour (2) — it locks in at ρ = 0 just like the real engine", () => {
+      const stuck = derived("LOCKED");
+      const result = take(m, afterShortcut(m, 0, derived("N")), BFS_OPEN);
+      expect(result.status).toBe("ok");
+      expect(result.ratio as number).toBeGreaterThanOrEqual(stuck);
+    });
+
+    it("fails the honesty invariant — its choice at the nest changes when the food moves", () => {
+      // Mirrors spec/engine-honesty.test.ts's check on the real engine, but expects
+      // the OPPOSITE outcome: this policy reads distanceToFood(), so relocating the
+      // goal must change an unpheromoned choice that a momentum-only η could not.
+      const foodMoved = { ...fixture, food: "L4" };
+      const distributionAt = (fx: typeof fixture) => {
+        const state = m.create(fx, { rho: 0, seed: 1 });
+        return m.choiceDistribution(state, fx.nest);
+      };
+      const before = distributionAt(fixture);
+      const after = distributionAt(foodMoved);
+      const changed = [...before].some(
+        ([neighbour, probability]) =>
+          Math.abs((after.get(neighbour) ?? 0) - probability) > 1e-9,
+      );
+      expect(
+        changed,
+        "the η mutant's choice at the nest did not change when the food moved — " +
+          "it should have, because it reads distance to food, which is exactly " +
+          "what the honesty invariant forbids the real engine from doing",
+      ).toBe(true);
+    });
+  });
+}

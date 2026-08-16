@@ -244,6 +244,32 @@ derived**, and each lands with its derivation, not just its number.
 | `M` | steps within which the default rate must switch | from the observed switch-time distribution, with margin above the slowest seed |
 | `K` | consecutive steps that would count as "stabilised" at maximum forgetting | from the trail's autocorrelation at maximum forgetting |
 
+### Derived values (2026-08-17)
+
+`pnpm derive` — 10 seeds, ρ ∈ {0, 0.12, 0.25}, 6000 steps sampled every 250, real
+engine and all six mutants on one schedule. Full tables:
+`docs/spikes/2026-08-17-derivation.md`.
+
+**Placement rule**: a threshold clears both sides by a stated margin, but sits
+where its meaning holds rather than at the midpoint of the gap — near the real
+engine's own distribution where the visitor's reading is the thing being judged
+(`LOCKED`, `SWITCHED`, `UNSTABLE`), at the point the gap forces where only one
+control remains eligible (`EMERGED`), or as the observed floor/margin of an
+already-decided ratio (`N`, `M`, `K`).
+
+| Symbol | Value | Margin toward real | Margin toward the control |
+|---|---|---|---|
+| `SETTLE` | **2000** | τ per long edge is within 5% of steady state (56.1) from step 100; 2000 was the standing assumption and holds | — (not a separation, a stability check) |
+| `N_trips` | **300** | — | primary rule (smallest window, tail noise < 0.02×, no crossing lag) did not discriminate: noise ran 0.098→0.075 across windows 50–500, never under 0.02×, and every window crossed at the same step. Secondary rule applied instead: display stability for the visitor's readout, keeping the window every prior spike already used rather than picking a new one on no evidence. Noise at 300 is 0.077× against 0.098× at the smallest window (50), for an identical crossing step |
+| `MIN_TRIPS` | **65** | trip-length reading stops jumping (\|Δ\| < 0.05×) from the 65th completed trip onward | accepted as derived, no separation needed — this is a warm-up floor, not a two-sided threshold |
+| `EMERGED` | **1.15** | clears real's worst reading (1.072) by **0.078** | cleared by pure-random-walk's best (1.235) by **0.085**. One pheromone map is excluded from this control: its best EMERGED reading (1.037) is already *below* the real engine's worst, so it cannot fail behaviour (1) — its pairing moved to behaviour (3) |
+| `LOCKED` | **1.85** | clears real's worst reading (2.000, every seed) by **0.150** | cleared by the closer mutant's best — ρ-pinned-at-0.25 (1.570) — by **0.280**. Max-update freshness (best 1.047, once ε-greedy lets it find the shortcut) clears by far more; it is the sharper control but ρ-pinned-at-0.25 is the binding one |
+| `SWITCHED` | **1.45** | clears real's worst reading (1.353) by **0.097** | cleared by ρ-ignored's worst case (2.000, constant) by **0.550** |
+| `M` | **3250** steps | — | slowest real seed to cross `SWITCHED` = 1.45 is 2500 steps; `M` = that + 25% margin, rounded up to the 250-step sample grid |
+| `N` | **6000** steps | every real ρ=0 seed holds at or above `LOCKED` for the entire 6000-step window sampled | this is the observed floor across the whole run tested, not a guess at a shorter bound — no decay was seen to measure |
+| `UNSTABLE` | **1.4** (ratio) | real's longest run below 1.4× is **1** sample (worst case over seeds) — it dips, once, never twice | max-update freshness's *least* stable seed still holds a run of **24** samples below 1.4× (the entire window) once ε-greedy lets it lock onto the short path — the same control used for `LOCKED`, now on the other side of the claim: it shows what real stabilisation looks like |
+| `K` | **2** samples | 2 exceeds real's worst-case run of 1 by a single sample — deliberately tight, because "never stabilises" is "a tendency, not a guarantee": one dip is noise, two in a row is what `K` exists to catch | cleared by the freshness control's 24-sample run by a wide margin |
+
 **Derivation protocol — two-sided separation** (Decision 6, settled):
 
 A threshold is not a number chosen from the real engine's behaviour. It is a
@@ -278,7 +304,7 @@ it. A negative control that isn't kept around stops being one.
 
 | Mutant | Must fail |
 |---|---|
-| max-update freshness field (the excluded model) | behaviour (2) — it always prefers the shorter value once seen, so it cannot lock in. **The key control for the whole claim**: it is the only one that proves the lock-in test can tell "forgetting is the mechanism" from "shorter paths just win" |
+| max-update freshness field (the excluded model), ε-greedy ε=0.06 | behaviour (2) — it switches onto the short branch at ρ = 0 once exploration lets it find the shortcut, where the real engine stays locked on the long one. **The key control for the whole claim**: it is the only one that proves the lock-in test can tell "forgetting is the mechanism" from "shorter paths just win". (Also the control for behaviour (4)/`UNSTABLE`/`K`, on the other side of the same claim: once it locks onto the short path it holds a run of 24/24 samples below `UNSTABLE`, showing what real stabilisation looks like against the real engine's worst-case run of 1) |
 | `η` encodes distance to food | the honesty invariant (Decision 1c). It passes the path tests *suspiciously well*, which is exactly why the honesty test must catch it |
 | pure random walk, no pheromone | behaviour (1) — nothing emerges at all |
 
@@ -286,9 +312,9 @@ it. A negative control that isn't kept around stops being one.
 
 | Mutant | Must fail |
 |---|---|
-| evaporation disabled (`ρ = 0` forced) | behaviours (3) and (4) — nothing is forgotten, so nothing switches and nothing destabilises |
-| `ρ` pinned at maximum | behaviours (1) and (3) — no trail survives to be followed |
-| one pheromone map instead of two | behaviour (1) — carriers cannot find home, so no round trip completes |
+| evaporation disabled (`ρ = 0` forced) | behaviour (3) — nothing is forgotten, so nothing switches whatever the slider says |
+| `ρ` pinned at maximum (0.25) | behaviour (2) — always forgets at the maximum rate, so no trail survives long enough to lock in even at ρ = 0 |
+| one pheromone map instead of two | behaviour (3), re-paired from an earlier (wrong) pairing to behaviour (1): its best `EMERGED` reading (1.037) is *better* than the real engine's own worst (1.072), so it cannot fail emergence — seekers and carriers reading and writing the same map conflate the outbound and inbound signal instead, so it fails to reliably switch onto the shortcut at the default rate (SWITCHED reading 1.910 against real's worst 1.353) |
 
 The `η`-encodes-distance mutant is the one to keep an eye on: it is the only wrong
 engine that makes the page look **better**. A page can fail honestly by breaking;

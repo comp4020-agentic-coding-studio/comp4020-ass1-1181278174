@@ -1,8 +1,11 @@
 // Every threshold, in one place, so no test invents its own.
 //
-// All null: nothing has been derived yet. Values arrive only from the spike, by
-// two-sided separation against the negative controls, with both margins recorded
-// in spec/oracles.md §3 — and never by adjusting a number until a test passes.
+// Derived 2026-08-17 by `pnpm derive`: two-sided separation against the negative
+// controls in spec/mutants/, 10 seeds × ρ ∈ {0, 0.12, 0.25}, both margins recorded
+// in spec/oracles.md §3 ("Derived values"). SETTLE, N_trips and MIN_TRIPS are
+// stability floors rather than two-sided separations; each says so at its entry
+// in that table. Nothing here was adjusted to make a test pass — a threshold that
+// would not separate stayed null and was reported, not moved.
 //
 // `derived()` throws while a threshold is still a symbol, so a behaviour test's
 // red says "not derived yet" rather than "expected undefined to be less than
@@ -40,16 +43,16 @@ export type ThresholdName =
   | "MIN_TRIPS";
 
 export const THRESHOLDS: Record<ThresholdName, number | null> = {
-  SETTLE: null,
-  EMERGED: null,
-  LOCKED: null,
-  SWITCHED: null,
-  UNSTABLE: null,
-  N: null,
-  M: null,
-  K: null,
-  N_trips: null,
-  MIN_TRIPS: null,
+  SETTLE: 2000,
+  EMERGED: 1.15,
+  LOCKED: 1.85,
+  SWITCHED: 1.45,
+  UNSTABLE: 1.4,
+  N: 6000,
+  M: 3250,
+  K: 2,
+  N_trips: 300,
+  MIN_TRIPS: 65,
 };
 
 export function isDerived(name: ThresholdName): boolean {
