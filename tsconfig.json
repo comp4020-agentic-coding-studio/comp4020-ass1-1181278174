@@ -3,7 +3,9 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // ES2023 because scripts/check-evidence.ts already calls toSorted at runtime
+    // and works — the lib was simply narrower than the code it never checked.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["vite/client", "node"],
     "strict": true,
     "noEmit": true,
@@ -11,7 +13,13 @@
     "moduleDetection": "force",
     "verbatimModuleSyntax": true,
     "useDefineForClassFields": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    // Node runs .ts directly (`pnpm spike`, `pnpm check:evidence`), and its ESM
+    // resolver needs the real extension on every import. tsc rejects that unless
+    // this is on; it is safe here because tsc only ever typechecks (noEmit).
+    "allowImportingTsExtensions": true
   },
-  "include": ["*.ts", "spec"]
+  // src and scripts were outside this list, so nothing in them was typechecked —
+  // the engine was about to land in src/sim unchecked.
+  "include": ["*.ts", "spec", "src", "scripts"]
 }

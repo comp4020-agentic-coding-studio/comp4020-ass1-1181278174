@@ -93,8 +93,39 @@ opened later.
 This fixture is the discriminating test for engine behaviour (2). It is data, not
 code, and it is committed so the test and the page use the same one.
 
-To record here once it exists: node and edge counts, the two branch lengths,
-their ratio, and the BFS answer before and after the shortcut opens.
+**As built** — `src/fixtures/double-bridge.ts`. Every number below is checkable by
+counting the edge literals in that file, and each is asserted in
+`spec/fixture.test.ts`:
+
+| | |
+|---|---|
+| nodes | 12 (`NEST`, `FOOD`, `L1`–`L7`, `S1`–`S3`) |
+| edges | 12 — 11 open at load |
+| long branch | `NEST L1 L2 L3 L4 L5 L6 L7 FOOD` = **8 moves** |
+| short branch | `NEST S1 S2 S3 FOOD` = **4 moves** |
+| branch ratio | **2.0** |
+| shortcut segment | `S1—S2`, exactly one, `closed: true` at load |
+| **BFS nest→food, shortcut closed** | **8 moves** |
+| **BFS nest→food, shortcut open** | **4 moves** |
+
+One number is worth recording because it is counter-intuitive and it caught a
+hand-arithmetic error during this fixture's own test: with `S1—S2` walled,
+**`NEST`→`S2` is 10 moves**, not 6 — the only route is the long way to `FOOD` and
+back through `S3`. `S1` and `S3` are reachable stubs hanging off either end of a
+severed branch. That detour is exactly why the colony finds the 8-move route first
+and has no reason to look again.
+
+**Fixture parameters** — this file is authoritative for them; `src/sim/params.ts`
+holds engine constants only, and neither is edited without asking.
+
+| | | |
+|---|---|---|
+| `h` | **2** | choice nonlinearity in `(k + τ)^h`, from Deneubourg et al. (1990). **At `h = 1` lock-in is weak by construction**, so a spike that fails to lock in at `h = 1` is not evidence against deposit mode 1b |
+| `k` | **20** | additive constant — how much exploration survives at `τ = 0` |
+| `floor` | **0** | first value, not a derived one. The spike probes it; it is recorded so every run reports the floor it actually used |
+
+`pnpm spike` prints all three on every run, which is what makes "no conclusion
+about lock-in without them" enforceable rather than aspirational.
 
 ### Conservation invariants
 

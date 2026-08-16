@@ -49,10 +49,24 @@ source is decided in slice 8.
 
 ## Slice 1 — the spike, headless, no UI
 
-- [ ] The double-bridge fixture as committed data: nest, food, long branch,
+- [x] The double-bridge fixture as committed data: nest, food, long branch,
       short branch closed.
-      *Done when: BFS gives the hand-checkable answer before and after the
-      shortcut opens, and both are recorded in `spec/oracles.md`.*
+      *Done: 12 nodes, 12 edges, long 8 moves / short 4 moves (ratio 2), BFS 8
+      closed → 4 open, all asserted in `spec/fixture.test.ts` and recorded in
+      `spec/oracles.md` §2. The oracle earned its keep immediately: it caught a
+      hand-arithmetic error of mine (`NEST`→`S2` with the wall up is 10 moves, not
+      6), which is now recorded because it is the counter-intuitive number.*
+- [x] The graph model the fixture induces, and the BFS oracle over it.
+      *Done: `src/fixtures/graph.ts` induces adjacency over open edges only;
+      `src/oracle/bfs.ts` lives outside `src/sim/**` so it shares no code with the
+      engine — which is the only reason its answer is worth measuring ants
+      against. A guard in `spec/engine-honesty.test.ts` fails if the engine ever
+      imports it.*
+- [x] The test files, red before the engine exists, each red for a stated reason.
+      *Done: 14 red, 34 green. 8 reds are "Cannot find module src/sim/engine.ts",
+      4 are "Threshold X has not been derived yet", 2 are the src/sim guard
+      refusing to pass vacuously. No red is a syntax error. Thresholds are imported
+      from one place (`spec/thresholds.ts`) and every one is still `null`.*
 - [ ] The chosen engine, headless, no rendering.
       *Done when: conservation invariants and determinism both pass, and the
       determinism test has been seen to fail against a deliberately unseeded
@@ -68,15 +82,19 @@ source is decided in slice 8.
 - [ ] **`scripts/spike.ts`, run by `pnpm spike`** — a named sensor, not a
       scratch file. Prints the reading and an ASCII map of the fixture so the
       engine can be inspected before anything renders.
-      *Done when: `pnpm spike` shows where the ants actually are, the ratio, and
-      the fixture parameters in use — and the ASCII map made at least one thing
-      visible that the numbers alone did not.*
-- [ ] `α`/`h` and the pheromone floor as **committed fixture parameters**, printed
+      *Partly done: the sensor exists and prints the fixture, the map and the
+      parameters; it says "no engine — nothing has been measured, so nothing may be
+      concluded" instead of a reading. The map has already paid for itself — drawn
+      as `NEST--S1==S2--S3--FOOD`, it makes the severed branch and its two reachable
+      stubs obvious, which is precisely the thing my `NEST`→`S2` = 6 error missed.
+      Not done until it prints a real reading and where the ants are.*
+- [x] `α`/`h` and the pheromone floor as **committed fixture parameters**, printed
       by `pnpm spike` and reported with every distribution (`spec/oracles.md`,
       spike watch).
-      *Done when: no conclusion about lock-in is recorded anywhere without them
-      stated next to it. At `h = 1` weak lock-in is expected, so a failure at
-      `h = 1` is not evidence against 1b.*
+      *Done: `h = 2`, `k = 20` (Deneubourg et al. 1990), `floor = 0` (first value,
+      to be probed). Committed in the fixture, authoritative in `spec/oracles.md`
+      §2, printed by `pnpm spike` on every run alongside the warning that a failure
+      to lock in at `h = 1` is not evidence against 1b.*
 - [ ] **`spec/mutants.test.ts`** — all six mutants, three load-bearing and three
       parameter pins, running under `pnpm check` and asserting RED on the fixtures
       (Decision 6 amendment).
