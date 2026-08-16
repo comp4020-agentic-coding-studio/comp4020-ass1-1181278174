@@ -35,6 +35,15 @@ const PARAMS = {
   depositPerStep: 20,
 } as const;
 
+/**
+ * The page's own params (v5). Decision 28: the director set the momentum weight
+ * to 3 to test it in the browser — w = 4 hugs edges more (a straight-mover slides
+ * along whatever wall it hits), w = 3 should hug less and explore a little more
+ * slowly. Provisional until judged by eye and by numbers; v3 and v4 keep w = 4
+ * because the spikes were measured on it.
+ */
+const V5_PARAMS = { ...PARAMS, straightBias: 3 } as const;
+
 type Rect = readonly [number, number, number, number];
 
 // --- v3: the wall-and-doorway field (frozen; the spikes cite it) ------------
@@ -253,7 +262,7 @@ export function v5Spec(): FieldSpec {
     nestZone: zoneAround(V4_NEST),
     foodZone: zoneAround(V4_FOOD),
     branches: { short: [], long: [] },
-    params: PARAMS,
+    params: V5_PARAMS,
   });
 }
 
