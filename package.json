@@ -12,7 +12,8 @@
     "check:evidence": "node scripts/check-evidence.ts",
     "spike": "node scripts/spike.ts",
     "test": "vitest run",
-    "derive": "node scripts/derive.ts"
+    "derive": "node scripts/derive.ts",
+    "shot": "node scripts/shot.ts"
   },
   "devDependencies": {
     "@types/jsdom": "^27.0.0",

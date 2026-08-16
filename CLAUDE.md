@@ -186,6 +186,57 @@ errors in the starter's own `scripts/check-evidence.ts` (`toSorted` against an E
 `lib`), fixed by moving `lib` to ES2023 — which the code already relied on at runtime.
 Five errors in a file that had shipped, under a check that had always been green.
 
+### Windows Chrome headless clamps the viewport to 526 CSS px and crops the PNG
+
+**What happened.** The first 390×844 screenshot of the page looked like a CSS bug:
+the h1 running off the right edge, the canvas and the trace strip cut off. It was
+not a CSS bug. The narrow layout was correct the whole time.
+
+**What is actually true.** `chrome.exe --headless --window-size=390,844` does not
+give a 390-wide page. Chrome clamps the window, lays the page out at
+**`clientWidth = 526`**, and then writes a PNG cropped to 390×844 — so the file
+has the size you asked for and the layout you did not. `--headless=new` and
+`--headless=old` behave identically. `--force-device-scale-factor=2` with
+`--window-size=780,1688` does not divide it either: the layout viewport comes out
+at 754 while the PNG renders at 2×.
+
+Consequences: **no screenshot from this toolchain evidences the 390 viewport**, and
+a phone-width screenshot that looks broken should be measured before it is
+believed. 526 is the narrowest honest width available, which does still exercise
+the single-column branch (the breakpoint is 900) — name such files for the width
+they actually rendered, never for the width requested.
+
+**How it was measured.** A probe page printing
+`document.documentElement.clientWidth`, screenshotted at `--window-size=390,844`:
+it reads **526**. At `--force-device-scale-factor=2 --window-size=780,1688`: 754.
+
+**How it was fixed.** A **Linux** Chromium has no window manager to clamp it and
+lays out at exactly the width asked for — `clientWidth = 390` at
+`--window-size=390,844`, measured with the same probe. Use
+**`pnpm shot`** (`scripts/shot.ts`), never `chrome.exe`: it drives Playwright's
+cached `chrome-headless-shell`, shoots both marking viewports, and **verifies the
+layout width with `--dump-dom` before trusting each PNG** — because one silently
+was not evidence, and nothing but a measurement can tell the difference.
+
+That binary needs three shared libraries this WSL lacks. Fetched unprivileged,
+no `sudo`:
+
+```
+mkdir -p ~/chromium-libs && cd ~/chromium-libs
+apt-get download libnspr4 libnss3 libasound2t64
+for d in *.deb; do dpkg-deb -x "$d" root/; done
+```
+
+`scripts/shot.ts` puts `~/chromium-libs/root/usr/lib/x86_64-linux-gnu` on
+`LD_LIBRARY_PATH`, and names any further missing `lib*.so` in its own error with
+the command to fetch it. The directory is machine-local and untracked — a fresh
+clone runs those three lines once.
+
+One route still does not work, so it is not retried blind: CDP
+(`Emulation.setDeviceMetricsOverride`, which would also set the layout viewport
+directly) needs the Windows-side debug port reachable from WSL, and it is not, on
+`127.0.0.1`, `localhost` or the default gateway.
+
 ## Before you commit the page
 
 `lang` on `<html>` · non-empty `<title>` · viewport meta · exactly one `<h1>` · `alt` on every
