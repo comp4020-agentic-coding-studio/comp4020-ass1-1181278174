@@ -85,6 +85,12 @@ export interface Fixture {
   readonly nestZone?: readonly NodeId[];
   readonly foodZone?: readonly NodeId[];
   /**
+   * The cells the one verb toggles. The renderer draws these as wall while the
+   * shortcut is shut and rings them either way, because they are the only thing
+   * on the canvas the visitor may touch.
+   */
+  readonly gapCells?: readonly NodeId[];
+  /**
    * Grid coordinates, when the fixture is one. The engine uses them for nothing
    * but "is this candidate straight ahead" and the whisker ray — never for a
    * distance to anything, which Decision 1c forbids and the honesty test holds.

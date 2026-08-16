@@ -25,6 +25,25 @@
 export const RHO = { locked: 0, default: 0.12, max: 0.25 } as const;
 
 /**
+ * The field's rates (Decision 19, provisional). A 30-move route cannot outlive
+ * the bridge's ρ = 0.12 — a half-life of about five steps — so the field runs two
+ * orders of magnitude slower and its slider is a different instrument.
+ *
+ * Kept separate from `RHO` rather than replacing it, because every derived
+ * threshold in spec/oracles.md was measured on the bridge at those rates. One
+ * constant serving two fixtures would be the same drift this file exists to stop.
+ *
+ * `default` is the cell Stage C measured as the best road on the field. It does
+ * NOT switch when the doorway opens; that is what Stage D is for.
+ */
+export const FIELD_RHO = {
+  locked: 0,
+  default: 0.01,
+  max: 0.05,
+  step: 0.001,
+} as const;
+
+/**
  * Steps between trace samples. 250 is the grid every distribution in
  * spec/oracles.md §3 was measured on, which is why `M` was rounded up to a
  * multiple of it — every derived step count is a whole number of samples.

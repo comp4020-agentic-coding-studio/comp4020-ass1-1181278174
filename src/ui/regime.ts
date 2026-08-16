@@ -1,3 +1,12 @@
+// PARKED (Decision 19). The page ran the double bridge when this was written;
+// it now runs the field, where no threshold has been derived and so no regime
+// has been measured. Labelling the field's slider from the bridge's bands would
+// be a wrong label, and the ruling was: no label rather than a wrong one. The
+// page speaks the number instead.
+//
+// It stays because the bands below ARE measured — on the bridge — and the derive
+// turn will need exactly this shape for the field. Nothing imports it today.
+//
 // What the slider's position means, in words a visitor can act on.
 //
 // The slider's `aria-valuetext` says "0.12 — switching", not "0.12". A bare

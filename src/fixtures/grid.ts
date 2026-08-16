@@ -101,6 +101,7 @@ export function buildField(spec: FieldSpec): Fixture {
     food: id(spec.food[0], spec.food[1]),
     nestZone: spec.nestZone,
     foodZone: spec.foodZone,
+    gapCells: spec.gaps.map(([x, y]) => id(x, y)),
     cells,
     nodes,
     edges,

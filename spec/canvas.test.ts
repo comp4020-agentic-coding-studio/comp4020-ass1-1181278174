@@ -1,28 +1,24 @@
-// The canvas is a projection, and a resize is a redraw.
+// The canvas is a projection of the field, and a resize is a redraw.
 //
 // The rubric names "a resize mid-interaction" explicitly, and the failure mode it
 // is looking for is a page that rebuilds its state when the box changes — a
-// colony restarted, a trail lost, a reading reset, in front of the visitor. The
+// colony restarted, a road lost, a reading reset, in front of the visitor. The
 // test that catches that is not a screenshot: it is the engine's own digest,
 // taken across a resize that really happened.
 
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
+import { FIELD, FIELD_SPEC } from "../src/fixtures/field.ts";
 import type { Colony } from "../src/sim/engine.ts";
 import * as engine from "../src/sim/engine.ts";
-import { RHO } from "../src/sim/rho.ts";
+import { FIELD_RHO } from "../src/sim/rho.ts";
 import { createCanvasView } from "../src/ui/canvas.ts";
-import { DARK } from "../src/ui/palette.ts";
-import {
-  distanceToSegment,
-  project,
-  shortcutEdge,
-} from "../src/ui/projection.ts";
+import { LIGHT } from "../src/ui/palette.ts";
 
 const SEED = 1;
-const STEPS = 600;
-const RESIZE_AT = 300;
+const STEPS = 400;
+const RESIZE_AT = 200;
+const ANTS = 60;
 
 /** jsdom has no ResizeObserver; this is the smallest thing the view can drive. */
 class StubResizeObserver {
@@ -37,10 +33,10 @@ class StubResizeObserver {
 }
 
 function pageWithCanvas(width: number, height: number) {
+  StubResizeObserver.instances = [];
   const dom = new JSDOM(`<!doctype html><canvas id="c"></canvas>`, {
     pretendToBeVisual: true,
   });
-  StubResizeObserver.instances = [];
   const window = dom.window as unknown as {
     ResizeObserver: unknown;
     devicePixelRatio: number;
@@ -49,8 +45,8 @@ function pageWithCanvas(width: number, height: number) {
   const canvas = dom.window.document.getElementById(
     "c",
   ) as unknown as HTMLCanvasElement;
-  // jsdom does no layout, so the box has to be declared. This is also what makes
-  // the resize below observable: the numbers change because we change them.
+  // jsdom does no layout, so the box has to be declared. That is also what makes
+  // the resize observable: the numbers change because we change them.
   let box = { width, height };
   canvas.getBoundingClientRect = (() =>
     ({ width: box.width, height: box.height, left: 0, top: 0 }) as DOMRect) as
@@ -63,58 +59,33 @@ function pageWithCanvas(width: number, height: number) {
   };
 }
 
-describe("the canvas is a projection of a fixed logical graph", () => {
-  const projection = project(DOUBLE_BRIDGE);
-
-  it("places every node inside the unit square", () => {
-    expect(projection.nodes.size).toBe(DOUBLE_BRIDGE.nodes.length);
-    for (const [node, point] of projection.nodes) {
-      expect(point.x, `${node}.x`).toBeGreaterThanOrEqual(0);
-      expect(point.x, `${node}.x`).toBeLessThanOrEqual(1);
-      expect(point.y, `${node}.y`).toBeGreaterThanOrEqual(0);
-      expect(point.y, `${node}.y`).toBeLessThanOrEqual(1);
-    }
+describe("the field fixture carries everything the renderer needs", () => {
+  it("gives every open cell a coordinate and nothing else", () => {
+    expect(FIELD.cells?.size).toBe(FIELD.nodes.length);
+    // Blocked cells are absent from the graph entirely — the renderer infers the
+    // wall from what is missing, so it cannot draw a wall the ants can walk
+    // through or leave one out that they cannot.
+    expect(FIELD.cells?.has("22,10")).toBe(false);
+    expect(FIELD.cells?.get("18,20")).toEqual([18, 20]);
   });
 
-  it("draws the long way longer than the short way", () => {
-    // Beat 2 has to be legible without prose, and both branches join the same two
-    // points — so if the drawn lengths were equal the picture would contradict
-    // the claim while every number stayed green.
-    const drawn = (branch: readonly string[]) =>
-      branch.slice(1).reduce((total, node, i) => {
-        const a = projection.nodes.get(branch[i] as string);
-        const b = projection.nodes.get(node);
-        return total + Math.hypot((b?.x ?? 0) - (a?.x ?? 0), (b?.y ?? 0) - (a?.y ?? 0));
-      }, 0);
-    expect(drawn(DOUBLE_BRIDGE.branches.long)).toBeGreaterThan(
-      drawn(DOUBLE_BRIDGE.branches.short) * 1.4,
-    );
+  it("names the doorway cells, so the tap target is not guessed", () => {
+    expect(FIELD.gapCells).toEqual(["22,19", "22,20", "22,21"]);
   });
 
-  it("puts the tap target on the one segment the visitor may toggle", () => {
-    const target = shortcutEdge(projection);
-    expect(target.edge.shortcut).toBe(true);
-    expect(target.edge.closed).toBe(true);
-    const middle = {
-      x: (target.a.x + target.b.x) / 2,
-      y: (target.a.y + target.b.y) / 2,
-    };
-    // Nearer to the shortcut than to anything else, or the verb is ambiguous.
-    const others = projection.edges
-      .filter((candidate) => candidate.index !== target.index)
-      .map((candidate) => distanceToSegment(middle, candidate.a, candidate.b));
-    expect(distanceToSegment(middle, target.a, target.b)).toBeLessThan(
-      Math.min(...others),
-    );
+  it("names both arrival zones, so the discs are not guessed either", () => {
+    expect(FIELD.nestZone).toHaveLength(9);
+    expect(FIELD.foodZone).toHaveLength(9);
   });
 });
 
 describe("a resize mid-run only redraws", () => {
   /** The same seeded run every time; the callback is the only thing that varies. */
   const run = (onStep?: (colony: Colony, step: number) => void): string => {
-    const colony = engine.createColony(DOUBLE_BRIDGE, {
-      rho: RHO.default,
+    const colony = engine.createColony(FIELD, {
+      rho: FIELD_RHO.default,
       seed: SEED,
+      ants: ANTS,
     });
     for (let i = 0; i < STEPS; i += 1) {
       engine.step(colony);
@@ -125,11 +96,10 @@ describe("a resize mid-run only redraws", () => {
 
   it("leaves the engine byte-identical across a resize it really performed", () => {
     const page = pageWithCanvas(900, 500);
-    const view = createCanvasView(page.canvas, DOUBLE_BRIDGE, DARK);
+    const view = createCanvasView(page.canvas, FIELD, LIGHT);
     const before = view.size();
 
     const withResize = run((colony, i) => {
-      // Drawn every step, exactly as the page draws it.
       view.draw(colony);
       if (i !== RESIZE_AT) return;
       page.setBox(360, 780);
@@ -143,23 +113,27 @@ describe("a resize mid-run only redraws", () => {
     expect(after.width).toBe(360);
     expect(after.height).toBe(780);
 
-    // No drawing at all, no resize at all — the run the engine would have had.
     expect(withResize).toBe(run());
-
     view.dispose();
   });
 
-  it("hit-tests the wall against the box it currently has", () => {
+  it("hit-tests the doorway against the box it currently has", () => {
     const page = pageWithCanvas(900, 500);
-    const view = createCanvasView(page.canvas, DOUBLE_BRIDGE, DARK);
-    const target = shortcutEdge(project(DOUBLE_BRIDGE));
+    const view = createCanvasView(page.canvas, FIELD, LIGHT);
+    // The field is letterboxed, so the doorway is not at a fraction of the box —
+    // it is at a fraction of the FIELD, offset by the letterbox bars.
+    const scale = Math.min(900 / FIELD_SPEC.width, 500 / FIELD_SPEC.height);
+    const offsetX = (900 - FIELD_SPEC.width * scale) / 2;
+    const offsetY = (500 - FIELD_SPEC.height * scale) / 2;
     const centre = {
-      x: ((target.a.x + target.b.x) / 2) * 900,
-      y: ((target.a.y + target.b.y) / 2) * 500,
+      x: offsetX + (FIELD_SPEC.gaps[1]?.[0] ?? 0 + 0.5) * scale,
+      y: offsetY + ((FIELD_SPEC.gaps[1]?.[1] ?? 0) + 0.5) * scale,
     };
-    expect(view.hitsShortcut(centre.x, centre.y)).toBe(true);
+    expect(view.hitsGap(centre.x, centre.y)).toBe(true);
     // The nest is nowhere near it, or the single verb would fire on any tap.
-    expect(view.hitsShortcut(0.08 * 900, 0.62 * 500)).toBe(false);
+    expect(
+      view.hitsGap(offsetX + 18 * scale, offsetY + 20 * scale + 200),
+    ).toBe(false);
     view.dispose();
   });
 });

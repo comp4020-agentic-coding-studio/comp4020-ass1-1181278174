@@ -35,13 +35,17 @@ const VIEWPORTS = [
 // reaches a state the visitor reaches by hand. Every one of these is a state the
 // controls produce; nothing here is reachable only from a URL.
 const STATES = [
-  { suffix: "", query: "" },
+  // Ten seconds in at 300 steps/s. NOT the load state: headless gives a page
+  // only a handful of rAF frames however long the virtual-time budget is, so an
+  // unprimed still shows a fraction of what a real browser runs in the same wall
+  // time. Priming makes the picture the honest one.
+  { suffix: "", query: "?steps=3000" },
   // The tap, at the default rate: the tick lands on the strip, the reading jumps
   // to the new BFS, then comes down as the colony finds the shortcut.
-  { suffix: "-opened", query: "?steps=2000&open&after=4000&rho=0.12" },
+  { suffix: "-opened", query: "?steps=3000&open&after=3000&rho=0.01" },
   // The slider at zero, same tap: the jump happens and nothing comes down. This
   // is beat 3 — the shortcut is open, in plain sight, and they will not take it.
-  { suffix: "-locked", query: "?steps=2000&open&after=4000&rho=0" },
+  { suffix: "-locked", query: "?steps=3000&open&after=3000&rho=0" },
 ] as const;
 
 function binary(): string {

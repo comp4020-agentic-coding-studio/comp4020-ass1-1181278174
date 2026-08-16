@@ -74,7 +74,7 @@ export function createStripView(
     ctx.moveTo(0, y(LOW) - 0.5);
     ctx.lineTo(width, y(LOW) - 0.5);
     ctx.stroke();
-    ctx.fillStyle = palette.label;
+    ctx.fillStyle = palette.muted;
     ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "left";
     ctx.fillText("1.0× — the shortest route", 2, y(LOW) - 6);

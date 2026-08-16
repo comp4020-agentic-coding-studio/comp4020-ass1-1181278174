@@ -829,11 +829,76 @@ argument for a wander rate that does not go through τ at all.
 **Adoption: PENDING.** Nothing adopted, no default changed, no threshold or `RHO`
 touched. The honesty invariant passes on v2.
 
+### Decision 19 — the page runs field v2 (provisional)
+
+Order changed: the page first, Stage D after. Director text, verbatim:
+
+> Provisional adoption, recorded as such in PLAN.md ("provisional — pending
+> Stage D and derive"): the page's fixture is field v2 with T = 80, W = 3,
+> w = 4, D = 20, ε = 0, 400 ants; ρ default 0.01, slider range 0–0.05 (linear,
+> step 0.001), RHO.locked = 0. The bridge stays the oracle fixture with its own
+> params; nothing about it moves. Regime labels are OFF on the field until
+> thresholds are derived — no label rather than a wrong one; aria-valuetext
+> says the number. The strip and the reading run as they are (same function,
+> BFS on the field). The secondary readout becomes "share of trips through the
+> gap" (never thresholded).
+
+**Provisional — pending Stage D and derive.** `ρ = 0.01` is the cell Stage C
+measured as the best road on the field (1.07× against BFS 58, τ_road 8.3 k). It
+does **not** switch when the doorway opens — that is the open question Stage D
+exists to answer, and the page shows what the engine does rather than what the
+argument needs.
+
+`RHO` in `src/sim/rho.ts` is untouched and still describes the bridge, where every
+derived threshold lives. The field's rates are a separate `FIELD_RHO`, and
+`spec/engine-invariants.test.ts` no longer has to choose between them.
+
+**Consequence to settle in the derive turn, not here:** `CLAUDE.md`'s Decision 11
+line ("linear 0.00–0.25 step 0.01, default 0.12") now describes the bridge and not
+the shipped control. Amending it is scheduled with the threshold derivation, as
+the director's own ruling put it.
+
+### Decision 13, amended — the page is light
+
+Director text, verbatim:
+
+> Palette — Decision 13 amended: the page is LIGHT, not dark. One palette, no
+> dark variant this turn. White or near-white field; ants as BLACK dots (400 of
+> them — the visitor should see them pour out of the nest; a black dot on white
+> is the most legible ant there is); wall and obstacle blocks in mid grey;
+> nest a blue disc, food a green disc; the food-scent as a warm amber-to-orange
+> glow that becomes the road; the home-scent as a fainter light-cyan glow;
+> the doorway drawn as a wall segment with the tap ring; the strip and the
+> reading recoloured to match. Text and controls dark on light, contrast
+> ≥ 4.5:1; the tap ring and the button focus state visible on white.
+
+The dark direction chosen at slice 3 was chosen for a fixture of twelve edges,
+where the trail glowing against near-black was the whole picture. On a field of
+2185 cells the subject is four hundred ants, and a black dot on white is the most
+legible ant there is. `src/ui/palette.ts` holds one palette again.
+
+### Decision 20 — pacing, 300 steps per second
+
+Selected by the director from an agent recommendation, so the choice is the
+director's and the number was mine to propose:
+
+> Pacing: 300 steps/s — I take your earlier recommendation, record it as a
+> decision.
+
+A food→nest trip on field v2 is 30 moves through the doorway and 58 over the top,
+against 8 and 4 on the bridge. At the bridge's 90 steps/s a single trip would take
+most of a second and beat 1 would not be "a road forms while you watch". At 300
+the first road appears in the first ten seconds, which is the claim beat 1 makes.
+
+The engine stays fixed-step and frame-clock-independent (Decision 12 (3)); this
+changes the accumulator's rate, not its nature, and no threshold is counted in
+seconds.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–18 are recorded, 9 and 10 dissolved. The
-director's next ruling — a per-step wander rate ε, the fifth and last knob — is
-theirs to make with Stage C's numbers in front of them, and is not assumed here. Beat 4's fixture source is
+**None settled by me.** Decisions 1–20 are recorded, 9 and 10 dissolved. Stage D
+(a per-step wander rate ε) is the director's next ruling and is not assumed here;
+`ε = 0` on the page today means the knob exists nowhere yet. Beat 4's fixture source is
 deferred to slice 8 as a condition, not an open question.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its

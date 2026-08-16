@@ -352,7 +352,15 @@ export const FIELD_SPEC: FieldSpec = {
     "49,19",
     ],
   },
-  params: { h: 2, k: 20, floor: 0 },
+  params: {
+    h: 2,
+    k: 20,
+    floor: 0,
+    gradedOver: 80,
+    whisker: 3,
+    straightBias: 4,
+    depositPerStep: 20,
+  },
 };
 
 export const FIELD = buildField(FIELD_SPEC);

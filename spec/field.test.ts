@@ -93,6 +93,16 @@ describe("field fixture", () => {
     expect(FIELD.params.floor).toBe(0);
   });
 
+  it("carries the adopted engine parameters (Decision 19, provisional)", () => {
+    // Without these the page runs a FLAT deposit on the field, which forms no
+    // road at all — and it looks like a rendering problem rather than an engine
+    // one, because the glow is there, just smeared over everything.
+    expect(FIELD.params.gradedOver).toBe(80);
+    expect(FIELD.params.whisker).toBe(3);
+    expect(FIELD.params.straightBias).toBe(4);
+    expect(FIELD.params.depositPerStep).toBe(20);
+  });
+
   it("has 3x3 arrival zones, all of them open ground", () => {
     expect(FIELD.nestZone).toHaveLength(9);
     expect(FIELD.foodZone).toHaveLength(9);

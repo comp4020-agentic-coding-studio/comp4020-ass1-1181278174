@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { DOUBLE_BRIDGE } from "../src/fixtures/double-bridge.ts";
+import { FIELD } from "../src/fixtures/field.ts";
 import { prefersReducedMotion } from "../src/ui/motion.ts";
 import { createPage } from "../src/ui/page.ts";
 
@@ -29,7 +29,7 @@ function mount(reducedMotion: boolean) {
   let clock = 0;
   const queue: (() => void)[] = [];
   const page = createPage(doc, {
-    fixture: DOUBLE_BRIDGE,
+    fixture: FIELD,
     reducedMotion,
     now: () => clock,
     schedule: (callback) => queue.push(callback),
@@ -84,11 +84,11 @@ describe("prefers-reduced-motion: reduce", () => {
     const page = start(true);
     page.click("grow");
     page.frames(50, 20);
-    // One second of frames at the page's 90 steps/s. 1000/90 does not divide
-    // evenly, so the exact-arithmetic assertions live in spec/loop.test.ts and
-    // this one allows the single step of slack that division leaves.
-    expect(page.steps()).toBeGreaterThanOrEqual(89);
-    expect(page.steps()).toBeLessThanOrEqual(90);
+    // One second of frames at the page's 300 steps/s (Decision 20). 1000/300 does
+    // not divide evenly, so the exact-arithmetic assertions live in
+    // spec/loop.test.ts and this one allows the step of slack division leaves.
+    expect(page.steps()).toBeGreaterThanOrEqual(299);
+    expect(page.steps()).toBeLessThanOrEqual(300);
     page.page.destroy();
   });
 
@@ -115,8 +115,8 @@ describe("without the preference", () => {
     const page = mount(false);
     expect(page.page.loop.running).toBe(true);
     page.frames(50, 20);
-    expect(page.steps()).toBeGreaterThanOrEqual(89);
-    expect(page.steps()).toBeLessThanOrEqual(90);
+    expect(page.steps()).toBeGreaterThanOrEqual(299);
+    expect(page.steps()).toBeLessThanOrEqual(300);
     page.page.destroy();
   });
 
@@ -160,19 +160,22 @@ describe("the three controls, and no more", () => {
     page.page.destroy();
   });
 
-  it("gives the slider Decision 11's range and a spoken regime", () => {
+  it("gives the slider the FIELD's range, and speaks the number not a regime", () => {
+    // Decision 19: regime labels are off on the field until the thresholds are
+    // derived — no label rather than a wrong one. The control is still never
+    // silent, because aria-valuetext says the number.
     const page = mount(false);
     const rho = page.doc.getElementById("rho") as HTMLInputElement;
     expect(rho.min).toBe("0");
-    expect(rho.max).toBe("0.25");
-    expect(rho.step).toBe("0.01");
-    expect(rho.value).toBe("0.12");
-    expect(rho.getAttribute("aria-valuetext")).toBe("0.12 — switching");
+    expect(rho.max).toBe("0.05");
+    expect(rho.step).toBe("0.001");
+    expect(rho.value).toBe("0.01");
+    expect(rho.getAttribute("aria-valuetext")).toBe("0.010");
 
     page.page.setRho(0);
-    expect(rho.getAttribute("aria-valuetext")).toBe("0.00 — locked");
-    page.page.setRho(0.25);
-    expect(rho.getAttribute("aria-valuetext")).toBe("0.25 — never settles");
+    expect(rho.getAttribute("aria-valuetext")).toBe("0.000");
+    page.page.setRho(0.05);
+    expect(rho.getAttribute("aria-valuetext")).toBe("0.050");
     page.page.destroy();
   });
 
@@ -182,7 +185,7 @@ describe("the three controls, and no more", () => {
     expect(wall.getAttribute("aria-pressed")).toBe("false");
     page.click("wall");
     expect(wall.getAttribute("aria-pressed")).toBe("true");
-    expect(wall.textContent?.trim()).toBe("Close the shortcut");
+    expect(wall.textContent?.trim()).toBe("Close the gap in the wall");
     expect(page.page.colony().shortcutOpen).toBe(true);
     page.page.destroy();
   });

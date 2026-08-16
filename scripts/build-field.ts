@@ -126,7 +126,19 @@ export function buildSpec(): FieldSpec {
     nestZone: zoneAround(NEST),
     foodZone: zoneAround(FOOD),
     branches: { short: [], long: [] },
-    params: { h: 2, k: 20, floor: 0 },
+    // Decision 19, PROVISIONAL — pending Stage D and the derive turn. These are
+    // the Stage-C cell that formed the best road on this field (τ_road 8.3 k at
+    // ρ = 0.01, reading 1.07× against BFS 58). h, k and floor are the bridge's
+    // and untouched; the four below are what a flat deposit could not do in 2-D.
+    params: {
+      h: 2,
+      k: 20,
+      floor: 0,
+      gradedOver: 80,
+      whisker: 3,
+      straightBias: 4,
+      depositPerStep: 20,
+    },
   };
 
   const fixture = buildField(draft);
@@ -179,7 +191,15 @@ ${cells(spec.branches.short)}
 ${cells(spec.branches.long)}
     ],
   },
-  params: { h: ${spec.params.h}, k: ${spec.params.k}, floor: ${spec.params.floor} },
+  params: {
+    h: ${spec.params.h},
+    k: ${spec.params.k},
+    floor: ${spec.params.floor},
+    gradedOver: ${spec.params.gradedOver},
+    whisker: ${spec.params.whisker},
+    straightBias: ${spec.params.straightBias},
+    depositPerStep: ${spec.params.depositPerStep},
+  },
 };
 
 export const FIELD = buildField(FIELD_SPEC);

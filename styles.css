@@ -1,6 +1,7 @@
 /* Mobile first. The canvas is the hero; everything else gets out of its way.
-   Dark, per Decision 13 — these values mirror src/ui/palette.ts, which the canvas
-   draws from.
+   LIGHT, per Decision 13 as amended — these values mirror src/ui/palette.ts,
+   which the canvas draws from. The subject is four hundred black ants, and a
+   black dot on white is the most legible ant there is.
 
    Layout, per Decision 14: at 390 the natural stack, canvas → reading → strip →
    controls → prose. At desktop the canvas takes the left two-thirds and the right
@@ -8,15 +9,19 @@
    canvas in a ≤ 65ch column. */
 
 :root {
-  --ground: #0f1216;
-  --page: #0b0d10;
-  --ink: #eceae5;
-  --muted: #8a93a3;
-  --edge: #232a34;
-  --raised: #1a1f27;
-  --focus: #6fd3c7;
+  --ground: #faf9f6;
+  --page: #fff;
+  --ink: #1a1c1f;      /* 15.9:1 on --page */
+  --muted: #5b6068;    /* 6.0:1 on --page */
+  --edge: #ddd8cd;
+  --raised: #f3f1ec;
+  --focus: #0f766e;    /* 4.9:1 on --page, and visible on white */
+  --ring: #c2410c;
+  --ant: #0b0b0c;
+  --to-food: #ea8214;
+  --to-home: #38bdd0;
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -108,6 +113,45 @@ main {
   color: var(--muted);
 }
 
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot.ant {
+  background: var(--ant);
+}
+
+.dot.to-food {
+  background: var(--to-food);
+}
+
+.dot.to-home {
+  background: var(--to-home);
+}
+
+.secondary {
+  color: var(--muted);
+}
+
 .strip {
   display: block;
   width: 100%;
@@ -140,7 +184,8 @@ button:hover {
 }
 
 button[aria-pressed="true"] {
-  border-color: var(--focus);
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
 }
 
 .buttons {
@@ -228,9 +273,15 @@ button[aria-pressed="true"] {
     height: 110px;
   }
 
-  .prose {
+  /* Under the canvas, not beside it — the legend labels the picture. */
+  .legend {
     grid-column: 1;
     grid-row: 2;
+  }
+
+  .prose {
+    grid-column: 1;
+    grid-row: 3;
   }
 }
 
