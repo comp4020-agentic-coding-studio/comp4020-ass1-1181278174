@@ -33,8 +33,9 @@ Stored verbatim at the director's instruction. This is the message that turned f
 open decisions into a contract, and its conditions are the reason the record can
 show *directing* rather than agreeing.
 
-**Produced.** `PLAN.md`, `spec/oracles.md`, `TASKS.md` — commit hash pending; the
-director commits after decisions 6–8 and this line gets the hash.
+**Produced.**
+[`6cf7742`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/6cf7742)
+— `PLAN.md`, `spec/oracles.md`, `TASKS.md`, and the two evidence scaffolds.
 
 **Why it is here.** Three of its clauses closed off retreats that would otherwise
 have been available later, and none of them is visible in the resulting diff:
