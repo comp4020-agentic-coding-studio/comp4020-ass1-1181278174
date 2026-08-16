@@ -277,3 +277,44 @@ the sweep produces a variant that forms a road.**
       D x rho. Geometry cause fixed; scale cause **not** fixed. Recorded in
       `docs/spikes/2026-08-17-field-v2-stage-c.md`.
 - [ ] The director's ruling on a fifth knob (a per-step wander rate). Not assumed.
+
+## Slice 1c — ε rejected, the claim becomes B′ (Decisions 21, 22)
+
+The claim changed, so the slices after it change with it. "A middle band of
+forgetting makes them switch" is false on this field: **lock-in is absolute**.
+The verb becomes *block the road*, and forgetting is what heals it.
+
+- [x] The advisor's four spikes reproduced in-repo, byte-identical apart from the
+      run-time stamp: `spike-staged` (ε), `spike-sequence`, `spike-block`,
+      `spike-block-fine`. Records in `docs/spikes/*-advisor.md`.
+- [x] ε applied from `docs/spikes/2026-08-17-wander-epsilon.patch` to run Stage D,
+      then **reverted** — not adopted. `scripts/spike-staged.ts` refuses to print
+      a table without it.
+- [x] Two supplementary spikes in the visitor's own order
+      (`docs/spikes/2026-08-17-field-v2-raise.md`): raising ρ on a formed road,
+      and blocking after raising it.
+- [x] `PLAN.md` Decisions 21 and 22; `CLAUDE.md` claim and beats; harness log.
+
+### What is left, in order
+
+- [ ] **The blocking control and its tests.** The verb becomes draw/block a wall
+      cell; the doorway toggle becomes the epilogue footnote. Behaviour tests
+      re-pointed to (2′) slow heal + ghost road at ρ = 0, (3′) heal within N at
+      ρ > 0, (4′) no road or no heal at high ρ. Mutants re-paired.
+- [ ] **Derive on the field.** Thresholds per fixture, ρ band per fixture, both
+      margins, mutants two-sided. Regime labels come back on when this lands, and
+      `CLAUDE.md`'s Decision 11 slider line is amended with them.
+- [ ] **The eight sentences** (slice 5), the h1 from B′'s title candidate.
+- [ ] **The epilogue** — free wall drawing, and the "it never takes the shortcut
+      you open" footnote, if it earns its place.
+
+### Two open questions the supplementary spikes raised
+
+Neither is a defect; both are the director's to settle, and both change a control
+or a beat rather than the engine.
+
+- [ ] Beat 2's ghost road needs ρ = 0 **before** the road forms. Does the beat
+      instruct that order, or does the slider's zero need to mean something else?
+- [ ] Beat 4 is unreachable from the shipped slider: destroying a formed road
+      needs ρ ≥ 0.2 and the maximum is 0.05. Widen the range, or make beat 4 a
+      cold-start beat?

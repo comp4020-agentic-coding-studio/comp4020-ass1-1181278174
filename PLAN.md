@@ -894,11 +894,114 @@ The engine stays fixed-step and frame-clock-independent (Decision 12 (3)); this
 changes the accumulator's rate, not its nature, and no threshold is counted in
 seconds.
 
+### Decision 21 — ε was spiked and is rejected by the evidence
+
+**Provenance: the director ran this outside the repo and I reproduced it here.**
+The scripts, the ε patch and the results are the director's work
+(`/mnt/c/Agent workspace/ASS1/advisor/13-field-spikes/`); this repo re-ran them
+unchanged and got byte-identical tables. Nothing below was measured by the agent
+first.
+
+The ruling that scheduled ε. There is no message in the build log titled
+"Ruling on Stage C"; the ruling arrived inside the message that opens *"Change
+of order — the page first"*, and this is its text, verbatim:
+
+> Stage D (Decision 19, wander ε) comes right after this turn, not before; the
+> claim question waits for it, and if it fails I pivot to Claim A — the renderer
+> is the same under either claim, so nothing here is wasted.
+
+Its condition was met and **ε failed it.** From
+`docs/spikes/2026-08-17-field-v2-stage-d-advisor.md`:
+
+- **ε = 0.01** is too weak and already spoils the road — 1.5× to 4× — and only
+  switches where the road is ruined anyway (ρ ≥ 0.02).
+- **ε = 0.03** does seed the doorway (69–72% of trips through it at the end) but
+  the road runs 3.4–5.5× and the reading never falls below 1.6×.
+- **ε = 0.1** is chaos.
+- **ε = 0, ρ swept finely over 0.012–0.018**: the road holds at 1.14–1.55× and
+  **not one trip ever goes through the doorway.** There is no knife edge to find.
+
+**ε is not adopted.** It exists in this repo only as
+`docs/spikes/2026-08-17-wander-epsilon.patch`, applied to run Stage D and
+reverted immediately after. `scripts/spike-staged.ts` refuses to print a table
+unless the patch is applied, because without it every arm silently collapses to
+ε = 0 and the output would look like evidence.
+
+The earlier ruling said the fallback was "Claim A". The pivot actually taken is
+B′ below.
+
+### Decision 22 — the claim moves from B to B′
+
+Director text, verbatim (Chinese as written; the English beneath each is a gloss
+by the agent, not the director's wording):
+
+> 主张 —— 从 B 改成 B′。
+>
+> 二、新主张 B′
+>   标题候选（英文，slice 5 定稿）：
+>     No ant knows the map. The colony still finds its way — as long as it
+>     forgets, and not too fast.
+>   四拍：① 路从零长出来（不变）；② 堵断它们的路：不遗忘（ρ=0）时它们涌进
+>   死胡同、鬼路困住它们十几秒；③ 有一点遗忘就一秒重连、鬼路淡掉；④ 忘太快
+>   什么路都留不住。"开近路它们永远不走"不再是正拍——留在记录里，之后再定
+>   要不要放进 Under the hood 卡片。
+>   控件仍 ≤3：画/堵墙（一个动词）、遗忘滑杆（三段：never forgets / forgets /
+>   forgets too fast，标签等 derive）、运行/暂停/重置。读数不变（趟长 ÷ 当前
+>   地形的 BFS 最短）。
+>   测试的对应关系改成：(1) 涌现；(2′) 堵路后 ρ=0 慢愈合且鬼路存留；(3′) ρ>0
+>   在 N 步内愈合；(4′) ρ 过大成不了路/愈合不了。mutants 重新配对（新鲜度场
+>   那个会怎么样，跑了才知道——它继续是反面对照）。具体阈值一律等 derive。
+
+**Gloss.** The verb becomes *block the road*, not *open a shortcut*. Beat 2 is a
+colony pouring into a dead end and held there by a road that no longer goes
+anywhere; beat 3 is that same break healing in about a second once there is a
+little forgetting; beat 4 is forgetting so fast that no road survives. "They
+never take the shortcut you open" stops being a beat and becomes a footnote.
+
+**Why the old claim had to go.** B said a middle band of forgetting makes the
+colony switch to a shortcut. On this field and this engine that sentence is
+false, and the evidence is two-sided: from
+`docs/spikes/2026-08-17-field-v2-sequence-advisor.md`, an established road holds
+at **2.07× with 0% of trips through the doorway at every ρ tried**, and raising
+or lowering the slider afterwards changes nothing. Lock-in here is not a tendency
+— it is absolute. That is also, precisely, what Goss and Deneubourg found in real
+ants, which is why B′ is a stronger claim to have arrived at than B was.
+
+**What the four beats are held against changes with them**: (1) emergence,
+(2′) blocked at ρ = 0 heals slowly and the ghost road persists, (3′) ρ > 0 heals
+within N steps, (4′) ρ too high forms or heals nothing. Every threshold waits for
+the derive turn, and the mutants are re-paired there — what the max-update
+freshness field does under (2′) is unknown until it is run.
+
+### Two supplementary spikes, and what they cost B′
+
+**Provenance: these two the agent wrote and ran**, at the director's request, to
+test B′ in the order a visitor performs it —
+`docs/spikes/2026-08-17-field-v2-raise.md`. Both found something that constrains
+the beats as *visitor actions*, and neither is fatal:
+
+- **Beat 2's ghost road needs the colony to have lived at ρ = 0 from the
+  start.** The advisor's blocking run settled 12,000 steps at ρ = 0, where τ
+  grows without bound, and healing then took 4,500 steps behind a permanent ghost
+  road. Settle at the page's default ρ = 0.01 instead — a bounded road at 8.3 k —
+  then slide to zero and block, and it heals in **250 steps** like every other
+  rate. So beat 2 is only reachable if the visitor sets the slider to zero
+  *before* the road forms.
+- **Beat 4 is not reachable from the shipped slider at all.** Raising ρ on a
+  formed road: 0.05 leaves it at 1.08×, 0.15 at 1.28×; only **0.2 and 0.3**
+  destroy it (41× and 48×). The slider's maximum is 0.05. A cold start is
+  different — from nothing, ρ ≥ 0.02 never forms a long road — but "turn it up
+  and watch the road die" is not currently something the visitor can do.
+
+Both are questions of the slider's range and of the order of the beats, not of
+the engine, and both are the director's to settle. They are recorded here rather
+than fixed, because fixing either one means changing a control or a beat.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–20 are recorded, 9 and 10 dissolved. Stage D
-(a per-step wander rate ε) is the director's next ruling and is not assumed here;
-`ε = 0` on the page today means the knob exists nowhere yet. Beat 4's fixture source is
+**None settled by me.** Decisions 1–22 are recorded, 9 and 10 dissolved. Field v4
+(open field, free wall drawing, ε measured for the look only) is the director's
+next message. Beat 4's fixture source is
 deferred to slice 8 as a condition, not an open question.
 
 New decisions will appear — the spike's evidence may reopen Decision 1 under its

@@ -1,0 +1,58 @@
+diff --git a/src/fixtures/double-bridge.ts b/src/fixtures/double-bridge.ts
+index b198d96..fbcea9e 100644
+--- a/src/fixtures/double-bridge.ts
++++ b/src/fixtures/double-bridge.ts
+@@ -70,6 +70,14 @@ export interface FixtureParams {
+    * today.
+    */
+   readonly whisker?: number;
++
++  /**
++   * (5) Wander ε — Decision 19, SPIKE ONLY here. With probability ε per step an
++   * ant ignores τ and momentum and takes a uniformly random non-U-turn edge.
++   * Encodes nothing about the world. Undefined or 0 draws no random number at
++   * all, so the bridge stays bit-identical.
++   */
++  readonly wander?: number;
+ }
+ 
+ export interface Fixture {
+diff --git a/src/sim/engine.ts b/src/sim/engine.ts
+index 48e95d1..05c4af3 100644
+--- a/src/sim/engine.ts
++++ b/src/sim/engine.ts
+@@ -256,15 +256,26 @@ export function step(colony: Colony): void {
+ 
+     const heading = colony.heading[ant] as number;
+     const since = colony.sinceSource[ant] as number;
+-    const weights = choices.map((choice) => {
+-      let tau = 0;
+-      for (const e of choice.ray) tau += steer[e] as number;
+-      return policy.weight(colony, steer, choice, carrying, {
+-        straight: choice.dir !== undefined && choice.dir === heading,
+-        tau,
++    const wander = colony.fixture.params.wander ?? 0;
++    let taken: Step;
++    if (wander > 0 && colony.random() < wander) {
++      // ε (Decision 19, spike): ignore τ and momentum, take any non-U-turn edge.
++      const pick = Math.min(
++        choices.length - 1,
++        Math.floor(colony.random() * choices.length),
++      );
++      taken = choices[pick] as Step;
++    } else {
++      const weights = choices.map((choice) => {
++        let tau = 0;
++        for (const e of choice.ray) tau += steer[e] as number;
++        return policy.weight(colony, steer, choice, carrying, {
++          straight: choice.dir !== undefined && choice.dir === heading,
++          tau,
++        });
+       });
+-    });
+-    const taken = choices[choose(colony, weights)] as Step;
++      taken = choices[choose(colony, weights)] as Step;
++    }
+     policy.deposit(colony, lay, taken.edge, carrying, since);
+     colony.at[ant] = taken.to;
+     colony.lastEdge[ant] = taken.edge;

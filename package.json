@@ -16,6 +16,11 @@
     "build:field": "node scripts/build-field.ts",
     "spike:graded": "node scripts/spike-graded.ts",
     "spike:stagec": "node scripts/spike-stagec.ts",
+    "spike:staged": "node scripts/spike-staged.ts",
+    "spike:sequence": "node scripts/spike-sequence.ts",
+    "spike:block": "node scripts/spike-block.ts",
+    "spike:block-fine": "node scripts/spike-block-fine.ts",
+    "spike:raise": "node scripts/spike-raise.ts",
     "shot": "node scripts/shot.ts"
   },
   "devDependencies": {
