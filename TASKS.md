@@ -16,10 +16,10 @@ re-skin in the last slice; the reading as a median over the last `N_trips`
 completed trips. Decisions 9 and 10 closed without needing a call. The spike can
 start.
 
-Still open, and what each holds up:
-
-- **Decision 8** (`prefers-reduced-motion`) — holds up slice 4, and interacts with
-  Decision 2b's requirement that beat 1 be live emergence.
+**Nothing is open.** Decisions 1–8 are settled with their conditions; 9 and 10
+dissolved. Two things are deliberately deferred rather than open: the spike's
+evidence may reopen Decision 1 under its own condition (a), and beat 4's fixture
+source is decided in slice 8.
 
 ## Slice 0 — harness first
 
@@ -56,19 +56,41 @@ Still open, and what each holds up:
 - [ ] Behaviours (1), (3), (4).
       *Done when: each passes, and each has been seen red against the negative
       control paired with it in `spec/oracles.md` §3.*
-- [ ] The six negative controls, committed alongside the real engine.
-      *Done when: each one fails the behaviour it is paired with, and the
-      `η`-encodes-distance control is caught by the honesty test rather than by a
-      path test — it will pass those.*
+- [ ] **`scripts/spike.ts`, run by `pnpm spike`** — a named sensor, not a
+      scratch file. Prints the reading and an ASCII map of the fixture so the
+      engine can be inspected before anything renders.
+      *Done when: `pnpm spike` shows where the ants actually are, the ratio, and
+      the fixture parameters in use — and the ASCII map made at least one thing
+      visible that the numbers alone did not.*
+- [ ] `α`/`h` and the pheromone floor as **committed fixture parameters**, printed
+      by `pnpm spike` and reported with every distribution (`spec/oracles.md`,
+      spike watch).
+      *Done when: no conclusion about lock-in is recorded anywhere without them
+      stated next to it. At `h = 1` weak lock-in is expected, so a failure at
+      `h = 1` is not evidence against 1b.*
+- [ ] **`spec/mutants.test.ts`** — all six mutants, three load-bearing and three
+      parameter pins, running under `pnpm check` and asserting RED on the fixtures
+      (Decision 6 amendment).
+      *Done when: each fails the behaviour it is paired with, the
+      `η`-encodes-distance mutant is caught by the honesty test rather than a path
+      test (it will pass those), and a mutant that stops being red fails the
+      roster.*
 - [ ] Derive the thresholds by two-sided separation (Decision 6,
       `spec/oracles.md` §3).
       *Done when: both distributions are recorded, every threshold has a stated
       margin on each side, and no threshold was moved to make a gap appear.*
+- [ ] Derive the **performance budget**: steps per second at fixture size, a frame
+      budget at 390×844, and a bundle-size ceiling.
+      *Done when: each number comes from a measurement on real hardware and is
+      written into `spec/oracles.md` §2 with the hardware named — a budget nobody
+      measured is a wish.*
 
 ## Slice 2 — the readout, still no chrome
 
-- [ ] Windowed median of trip length over `W` steps, as a ratio to BFS.
-      *Done when: the ratio trace matches the distributions recorded in slice 1.*
+- [ ] The reading: median trip length over the last `N_trips` **completed
+      food→nest trips**, as a ratio to BFS. Not a step window (Decision 5).
+      *Done when: the trace matches the distributions recorded in slice 1, and
+      below `MIN_TRIPS` it reads "no reading yet" rather than a number.*
 - [ ] The trace the history line will plot — the same series, no smoothing.
       *Done when: it is the identical series the test reads, not a copy that
       could drift from it (`spec/oracles.md` §2).*
@@ -84,16 +106,32 @@ Still open, and what each holds up:
       path glows.
       *Done when: a person who has read no text can say which way the ants are
       going. Verified by looking, at both viewports, and reported as such.*
-- [ ] The history line, plotting the slice-2 trace.
-      *Done when: it fits the phone viewport without crowding the canvas, and
-      any easing applied is to the drawing only, never to the series.*
+- [ ] The history trace, plotting the slice-2 reading. One line, a 1.0× baseline,
+      a vertical tick where the shortcut opens.
+      *Done when: it fits the phone viewport without crowding the canvas, and any
+      easing applied is to the drawing only, never to the series.*
+- [ ] **Screenshots at 1920×1080 and 390×844, archived under `docs/`.**
+      *Done when: both are committed and linked with relative paths, so "verified at
+      both viewports" is a thing a marker can see rather than a claim they have to
+      take. Repeat for slices 4 and 5 — the screenshot is the evidence, and it does
+      not count towards any word budget.*
 
 ## Slice 4 — controls
 
-- [ ] Forgetting slider (native range), open/close shortcut, run/reset. Three,
-      no more.
-      *Done when: every one is operable by keyboard alone, and the tab order is
-      sane at both viewports.*
+- [ ] Three controls, no more: **toggle a wall cell** (this is what opens the
+      shortcut — there is no separate open/close control, Decision 2a), the
+      forgetting slider (native range), and **run/pause/reset with run/pause
+      visible** (WCAG 2.2.2, every visitor).
+      *Done when: every one is operable by keyboard alone, the tab order is sane at
+      both viewports, and the wall toggle is the same tool the epilogue and beat 4
+      will reuse.*
+- [ ] The reduced-motion branch its own test (Decision 8).
+      *Done when: with the preference set, there is no autoplay, cadence is ≤ 4 fps
+      or the step-200 control is present, decorative motion is absent, and trail
+      growth still happens. Verified with the media query forced on — the branch
+      that is never exercised is the one that is broken.*
+- [ ] Screenshots at both viewports, archived under `docs/`.
+      *Done when: committed and linked with relative paths.*
 - [ ] `prefers-reduced-motion` per Decision 8: decorative motion dropped (glow
       pulsing, easing, jitter), informative motion kept (trail growth, ants
       moving), no autoplay for those who set the preference.
@@ -108,8 +146,19 @@ Still open, and what each holds up:
       ships, is a footer credit and not one of the eight.
       *Done when: each slot is filled by exactly one sentence, the applications
       sentence carries all three items, and no ninth sentence has appeared.*
+- [ ] A test that counts prose sentences in `dist` and fails above eight, with the
+      counting rule from Decision 7 (`h1`, ODbL footer, control labels, readouts and
+      ≤ 4-word hints excluded).
+      *Done when: it has been seen red against a ninth sentence.*
+- [ ] The two fixed endings held by test: the applications sentence ending
+      **"— and none of it is how Google Maps routes you"**, and the last argument
+      sentence keeping **"a tendency, not a guarantee"**.
+      *Done when: both are asserted, so a later edit for flow cannot quietly remove
+      the page's two refusals to overclaim.*
 - [ ] Replace the starter page; `spec/starter.test.ts` goes red and is deleted.
       *Done when: the invariants still pass against the built site.*
+- [ ] Screenshots at both viewports, archived under `docs/`.
+      *Done when: committed and linked with relative paths.*
 
 ## Slice 6 — the epilogue, "break it yourself"
 

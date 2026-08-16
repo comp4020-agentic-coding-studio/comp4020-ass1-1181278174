@@ -27,9 +27,10 @@ The visitor should feel that with their own hands, not read it.
 "Two acts" hid a structural fact: beats 1–3 contain the whole argument, and
 beat 4 is different in kind from them. Written out honestly:
 
-1. **No ant knows the map.** The colony is running; a trail is already there.
-   Nothing is asked of the visitor yet. Establishes that a path exists without
-   anyone planning it.
+1. **No ant knows the map.** The fixture loads with **zero pheromone**. Ants
+   wander; a trail forms in front of the visitor within seconds. Nothing is asked
+   of them yet — the point is that they *watch* a path appear without anyone
+   planning it, which a pre-laid trail could only assert.
 2. **Lock-in.** A shortcut opens. The colony keeps using the long way. The
    readout shows how much longer. This is the double bridge, and it should be
    *visible* — the shortcut sits empty while the long path glows.
@@ -53,7 +54,9 @@ page assert emergence rather than show it.
 
 1. **Toggle a wall cell** — one verb, doing four jobs.
 2. **Forgetting rate** — native `<input type=range>`. The page's reason to exist.
-3. **Run / reset** — a button.
+3. **Run / pause / reset** — and **run/pause must be visible**, not just
+   available. WCAG 2.2.2 requires motion lasting more than five seconds to be
+   pausable, and this simulation runs indefinitely (Decision 8).
 
 Decision 2a collapses what looked like three separate affordances into one verb:
 opening the shortcut is a toggle on a highlighted segment, the closing
@@ -258,9 +261,17 @@ runtime requests; data committed; `prefers-reduced-motion` respected.
 
 ## Decisions — settled
 
-The director records; I propose. Each decision below is quoted **verbatim** as
-given, conditions included. The rejected options stay written down earlier in this
-file, because what was turned down and why is part of the record.
+The director records; I propose. The rejected options stay written down earlier in
+this file, because what was turned down and why is part of the record.
+
+**Provenance, stated because it differs between decisions and the difference
+matters.** Decisions 1–5 arrived as written director text and are quoted verbatim
+below, conditions included. Decisions 6–8 were **selections from two-option
+questions whose option text the agent drafted** — so the *choice* is the
+director's and the *wording of the option* is the agent's, and there is no
+director message to quote for the choice itself. Their conditions, added on
+review, **are** director text and are quoted verbatim. Nothing here paraphrases a
+director message as though it were quoted, and nothing invents one.
 
 ### Decision 1 — engine
 
@@ -344,31 +355,92 @@ invariants that must not break.
 > hyper-parameter, the ant mill) belong to the page regardless of Beat 4.
 
 This closes Decision 10, against my reading: all three application sentences stay,
-and they belong to the page rather than to beat 4. Consequence for Decision 7 —
-3 application sentences + 1 citation + 1 ODbL line (if beat 4 ships) is **5 of the
-8**, leaving 3 for the claim itself.
+and they belong to the page rather than to beat 4.
+
+> ~~Consequence for Decision 7 — 3 application sentences + 1 citation + 1 ODbL
+> line (if beat 4 ships) is **5 of the 8**, leaving 3 for the claim itself.~~
+
+**Superseded by Decision 7.** The three applications are compressed into one
+sentence and the ODbL line is a footer credit, so the committed total is 2 of the
+8, not 5, and the argument gets 6.
 
 ### Decision 6 — threshold derivation
+
+*Chosen from two agent-drafted options (two-sided separation vs worst-seed plus
+stated slack). The choice is the director's; the option wording below the
+amendment is the agent's.*
 
 **Two-sided separation.** A threshold is not chosen from the real engine's
 behaviour; it is a number that separates the real engine from a deliberately wrong
 one, with stated margin on both sides. If no such number exists, the readout or
 the fixture is wrong — never the threshold.
 
-Six negative controls are committed alongside the real engine and enumerated in
-`spec/oracles.md` §3, each paired with the behaviour it must fail. The one that
-matters most is the max-update freshness field: it is the model the director
-excluded, and it is the only thing that proves the lock-in test can distinguish
-"forgetting is the mechanism" from "shorter paths just win".
+**Amendment — 2026-08-17, director, verbatim:**
 
-The one to watch is the `η`-encodes-distance control, because it is the only wrong
-engine that makes the page look **better**. A page can fail honestly by breaking;
-it fails dishonestly by working for a reason it denies.
+> Decision 6: I said at most THREE deliberately-wrong engines. I amend to: keep
+> your six, but mark three as load-bearing (max-update field, η encodes distance,
+> pure random walk) and the other three as one-line parameter pins; all six live
+> in spec/mutants.test.ts and run under pnpm check, asserting RED on the fixtures.
+> Record this as my amendment, dated.
 
-This makes "a threshold that has never been red is not a test" structural rather
-than aspirational: every threshold is born red against something.
+So the six split by cost, not by importance:
+
+| Load-bearing — real alternative engines | Parameter pins — one line each |
+|---|---|
+| max-update freshness field | evaporation disabled (`ρ = 0` forced) |
+| `η` encodes distance to food | `ρ` pinned at maximum |
+| pure random walk, no pheromone | one pheromone map instead of two |
+
+All six live in `spec/mutants.test.ts` and **run under `pnpm check`, asserting RED
+on the fixtures**. That is the part that makes the rule enforceable rather than
+remembered: a mutant that stops being red is a regression the roster catches, so
+"a threshold that has never been red is not a test" becomes a standing check
+instead of a one-time ritual at derivation.
+
+The max-update field matters most: it is the model the director excluded, and the
+only control that proves the lock-in test can tell "forgetting is the mechanism"
+from "shorter paths just win". The `η`-encodes-distance control is the one to
+watch, because it is the only wrong engine that makes the page look **better**. A
+page can fail honestly by breaking; it fails dishonestly by working for a reason
+it denies.
 
 ### Decision 7 — the prose budget
+
+*Chosen from two agent-drafted options (applications compressed to one sentence vs
+one sentence each). The choice is the director's; the conditions below are quoted.*
+
+**Conditions — 2026-08-17, director, verbatim:**
+
+> Decision 7: add the counting rule (h1, ODbL footer, control labels, readouts, ≤
+> 4-word hints do not count) and the honesty clause (applications sentence ends "—
+> and none of it is how Google Maps routes you"; last argument sentence keeps "a
+> tendency, not a guarantee"); a test may count prose sentences in dist and fail
+> above 8.
+
+**The counting rule.** These do not count against the eight:
+
+- the `h1`
+- the ODbL footer credit
+- control labels
+- readouts (the ratio, "no reading yet", the trace's axis marks)
+- hints of **four words or fewer**
+
+Everything else that is a sentence of prose counts. A test counts prose sentences
+in `dist` and fails above eight, so the budget is enforced by the roster rather
+than by discipline.
+
+**The honesty clause.** Two sentences carry fixed endings, and they are not
+stylistic:
+
+- the applications sentence ends **"— and none of it is how Google Maps routes
+  you"**. It pre-empts the misreading the applications invite, in the same breath
+  that makes them.
+- the last argument sentence keeps **"a tendency, not a guarantee"**. The engine
+  produces near-shortest paths probabilistically; a page that implies determinism
+  would be overclaiming what the visitor just watched.
+
+Both are the page refusing a stronger claim than the simulation supports. They
+are quoted here so a later edit cannot smooth them away without it showing.
 
 Eight sentences, allocated as named slots rather than spent as they occur to us.
 
@@ -399,6 +471,36 @@ sentence keeps them as a footnote to the claim, and hands the argument six
 sentences instead of four.
 
 ### Decision 8 — `prefers-reduced-motion`
+
+*Chosen from two agent-drafted options (no autoplay for those who set the
+preference vs no autoplay for anyone). The choice is the director's; the conditions
+below are quoted.*
+
+**Conditions — 2026-08-17, director, verbatim:**
+
+> Decision 8: add the slowed cadence (≤ 4 fps or a "step 200" button), run/pause as
+> a visible control (WCAG pausable motion), and a dedicated test for the
+> reduced-motion branch.
+
+**Slowed cadence.** For visitors who set the preference, informative motion is
+kept but slowed: **≤ 4 fps**, or a **"step 200"** button that advances the
+simulation in discrete jumps instead of animating it. Either satisfies the
+preference without deleting the content — the trail still forms in front of them,
+just not at animation frame rates.
+
+The step-200 form is worth noting as the *better* option rather than the fallback:
+it turns continuous motion into a deliberate act, which is exactly what the
+preference asks for, and it makes beat 1 reproducible in a screenshot.
+
+**Run/pause is a visible control, not an available one.** WCAG 2.2.2 (Pause, Stop,
+Hide) requires motion lasting more than five seconds to be pausable, and this
+simulation runs indefinitely. This is a conformance requirement for *every*
+visitor, not a reduced-motion accommodation, so it lives in the control list
+(control 3) rather than in this decision's branch.
+
+**A dedicated test for the reduced-motion branch.** Not a note in a checklist: the
+branch has its own test, because two code paths where only one is exercised means
+the unexercised one is broken and nobody knows yet.
 
 The distinction that governs it is **decorative** versus **informative** motion:
 

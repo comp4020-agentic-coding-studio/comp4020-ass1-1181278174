@@ -224,22 +224,78 @@ red against something.
 
 ### The wrong engines — negative controls
 
-Each is a deliberate break, paired with the behaviour it must fail. They are
-committed alongside the real engine, because a negative control that isn't kept
-around stops being one.
+Six mutants, all living in **`spec/mutants.test.ts`** and **running under
+`pnpm check`, asserting RED on the fixtures** (Decision 6 amendment, 2026-08-17).
 
-| Wrong engine | Must fail |
+Running them in the roster rather than once at derivation is what makes the rule
+enforceable: a mutant that stops being red is a regression, and the roster catches
+it. A negative control that isn't kept around stops being one.
+
+**Load-bearing — real alternative engines, worth their weight:**
+
+| Mutant | Must fail |
 |---|---|
-| max-update freshness field (the excluded model) | behaviour (2) — it always prefers the shorter value once seen, so it cannot lock in. **The key negative control for the whole claim.** |
-| evaporation disabled, `ρ` ignored | behaviours (3) and (4) — nothing is ever forgotten, so nothing switches and nothing destabilises |
-| `ρ` pinned at maximum | behaviours (1) and (3) — no trail survives to be followed |
-| `η` encoding distance to food | the honesty invariant (Decision 1c). It will pass the path tests *suspiciously well*, which is exactly why the honesty test has to be able to catch it |
-| one pheromone map instead of two | behaviour (1) — carriers cannot find home, so no round trip completes |
+| max-update freshness field (the excluded model) | behaviour (2) — it always prefers the shorter value once seen, so it cannot lock in. **The key control for the whole claim**: it is the only one that proves the lock-in test can tell "forgetting is the mechanism" from "shorter paths just win" |
+| `η` encodes distance to food | the honesty invariant (Decision 1c). It passes the path tests *suspiciously well*, which is exactly why the honesty test must catch it |
 | pure random walk, no pheromone | behaviour (1) — nothing emerges at all |
 
-Row 4 is the one to keep an eye on: it is the only wrong engine that makes the
-page look *better*. A page can fail honestly by breaking; it fails dishonestly by
-working for a reason it denies.
+**Parameter pins — one line each:**
+
+| Mutant | Must fail |
+|---|---|
+| evaporation disabled (`ρ = 0` forced) | behaviours (3) and (4) — nothing is forgotten, so nothing switches and nothing destabilises |
+| `ρ` pinned at maximum | behaviours (1) and (3) — no trail survives to be followed |
+| one pheromone map instead of two | behaviour (1) — carriers cannot find home, so no round trip completes |
+
+The `η`-encodes-distance mutant is the one to keep an eye on: it is the only wrong
+engine that makes the page look **better**. A page can fail honestly by breaking;
+it fails dishonestly by working for a reason it denies.
+
+### Spike watch — what could produce a false negative
+
+Decision 1a says that if 1b cannot show all four behaviours we reopen toward 1a.
+That clause is only safe if a *failure to lock in* actually means the model cannot
+lock in, rather than that it was run with the wrong constants.
+
+Lock-in sharpness in 1b depends on **the choice nonlinearity** and **any pheromone
+floor**, not on the deposit rule alone:
+
+- Deneubourg's double-bridge model chooses with `(k + τ)^h / Σ(k + τ)^h`, where
+  **`h ≈ 2`**. At `h = 1` the choice is linear in pheromone and lock-in is weak
+  by construction — the colony keeps sampling the alternative, so a shortcut gets
+  found and taken. **Concluding "1b cannot lock in" from `α = 1` or `h = 1` alone
+  would be a false negative**, and would send us to 1a for no reason.
+- A pheromone **floor** (a minimum `τ` on every edge, or a `k` that never decays)
+  sets how much exploration survives at equilibrium, so it bounds how hard lock-in
+  can ever be.
+
+Therefore: **`α` / `h` and the floor are fixture parameters**, committed with the
+fixture and **reported alongside the distributions**, not buried as engine
+constants. Any spike conclusion about behaviour (2) is meaningless without them
+stated.
+
+### The prose budget is a test
+
+Decision 7. A test counts prose sentences in `dist` and **fails above eight**.
+Not counted: the `h1`, the ODbL footer credit, control labels, readouts, and hints
+of four words or fewer.
+
+Two sentences carry fixed endings and a test should hold them, because they are the
+page declining to overclaim and an edit for flow would quietly remove them:
+
+- the applications sentence ends **"— and none of it is how Google Maps routes
+  you"**
+- the last argument sentence keeps **"a tendency, not a guarantee"**
+
+### The reduced-motion branch has its own test
+
+Decision 8. Two code paths where only one is exercised means the unexercised one
+is broken and nobody knows yet. The branch is tested directly: preference set →
+no autoplay, cadence at or below 4 fps (or the step-200 control present), and
+decorative motion absent while trail growth still occurs.
+
+Run/pause being **visible** is not part of this branch — WCAG 2.2.2 applies to
+every visitor, so it is asserted unconditionally.
 
 ## 4. Test order
 
