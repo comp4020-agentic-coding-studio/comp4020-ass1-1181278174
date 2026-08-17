@@ -506,15 +506,10 @@ button.primary:hover {
     margin-top: 6px;
   }
 
+  /* The background reading runs under both columns, at reading width. */
   .background {
-    padding-top: 6px;
-    border-top: 1px solid var(--edge);
-  }
-
-  .from {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: 0;
+    grid-column: 1 / -1;
+    max-width: 65ch;
   }
 
   .readout {

@@ -1326,9 +1326,9 @@ advisor at the director's instruction.
 
 Director: 「A + B + C① + E」from the advisor's visual review. (A) At desktop the page is
 two independent columns — the canvas, its legend and the three beats on the left;
-the reading, the controls and the background reading (where this comes from, under
-the hood, sources) on the right — so nothing hangs in empty space whatever the other
-column's height; at 390 the wrappers dissolve and the order is canvas → legend →
+the reading and the controls on the right; the background reading (where this comes
+from, under the hood, sources) runs under both columns at reading width — the
+director asked for it back below rather than beside the controls; at 390 the wrappers dissolve and the order is canvas → legend →
 reading/controls → beats → background. (B) While paused, Run is the primary button
 (filled), and steps back to an ordinary Pause once running. (C①) The intro shows a
 still of the simulation beside its text at desktop — `public/preview.png`, a crop of
