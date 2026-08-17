@@ -44,7 +44,16 @@ export const FIELD_RHO = {
    * route there is — and all three heal a broken road within 250 steps.
    */
   default: 0.02,
-  max: 0.05,
+  /**
+   * Decision 30: the right-hand end has to be somewhere no road survives, or
+   * "forget everything" is a label on nothing. Measured on field v5 with a road
+   * grown at 0.02 and ρ then raised: blank keeps its road at 0.15 and loses it at
+   * 0.2 (18.9× within 3,000 steps); random keeps it even at 0.2 (1.15×) and loses
+   * it at 0.3 (23×); the maze loses it from 0.15. So 0.3 — every scene's road is
+   * gone within about twenty seconds there. Linear, step 0.001: the working band
+   * (0.002–0.05) is the left sixth of the track, which is coarse but usable.
+   */
+  max: 0.3,
   step: 0.001,
 } as const;
 

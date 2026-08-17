@@ -228,7 +228,7 @@ describe("the five controls, and no more", () => {
     const page = mount(false);
     const rho = page.doc.getElementById("rho") as HTMLInputElement;
     expect(rho.min).toBe("0");
-    expect(rho.max).toBe("0.05");
+    expect(rho.max).toBe("0.3");
     expect(rho.step).toBe("0.001");
     expect(rho.value).toBe("0.02");
     expect(rho.getAttribute("aria-valuetext")).toBe("0.020");

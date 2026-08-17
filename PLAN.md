@@ -1272,9 +1272,20 @@ that scrolls off. Every screenshot in `pnpm shot` is now taken scrolled to the
 simulation, and one is taken of the intro. Written, committed and pushed by the
 advisor at the director's instruction.
 
+### Decision 30 — the forgetting slider reaches 0.3
+
+The right-hand end of the slider has to be somewhere no road survives, or the
+label "forget everything" is a label on nothing — and the prose (slice 5) says
+"push forgetting to the far right and no road survives at all". Measured on field
+v5, seed 1, a road grown at 0.02 and ρ then raised: blank keeps its road at 0.15
+(1.31×) and loses it at 0.2 (18.9× within 3,000 steps); random keeps it even at
+0.2 (1.15×) and loses it at 0.3 (23×); the maze loses it from 0.15. The maximum
+moves from 0.05 to **0.3**, linear, step 0.001, default unchanged at 0.02. Written,
+committed and pushed by the advisor at the director's instruction.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–29 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
+**None settled by me.** Decisions 1–30 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
 speed control, is folded into `CLAUDE.md`'s cap entry and superseded by 26). Beat 4's
 fixture source is deferred to slice 8 as a condition, not an open question.
 
