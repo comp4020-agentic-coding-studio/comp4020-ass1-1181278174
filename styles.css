@@ -332,6 +332,79 @@ button[aria-pressed="true"] {
 
 .prose {
   max-width: 65ch;
+  display: grid;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+.beat {
+  display: grid;
+  gap: 4px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--focus);
+}
+
+.argument,
+.from-text {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.from {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--edge);
+}
+
+.prose h2 {
+  margin: 0 0 6px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.from-text {
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.hood {
+  padding: 10px 14px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--raised);
+  font-size: 0.875rem;
+}
+
+.hood summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.hood ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.sources ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+}
+
+.sources a {
+  color: var(--focus);
 }
 
 :is(a, button, input, canvas):focus-visible {

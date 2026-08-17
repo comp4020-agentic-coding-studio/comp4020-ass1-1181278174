@@ -1283,9 +1283,33 @@ v5, seed 1, a road grown at 0.02 and ρ then raised: blank keeps its road at 0.1
 moves from 0.05 to **0.3**, linear, step 0.001, default unchanged at 0.02. Written,
 committed and pushed by the advisor at the director's instruction.
 
+### Decision 31 — the page's body
+
+Director, verbatim, on the applications sentence: 「这个我感觉不好，我希望这样写…这个原始的
+蚁群算法往往难以形成最优路径，然后讲解一下原因，然后说一下现实中常用的蚁群算法和我们的区别，
+以及蚁群算法在现实中的运用」and, on the "Google Maps" closer: 「删掉这个」. Gloss: replace
+the applications sentence with — you may have noticed this original colony often
+fails to reach the best route; explain why; say how the ant-colony algorithms used
+in practice differ from ours; say where they are used. Drop the Google Maps line.
+
+**Built.** Six argument sentences in three beats under the canvas — Press Run ·
+Draw a wall · Try both ends — each beat a thing the visitor does; the last keeps
+"a tendency, not a guarantee". Then a sources block of four sentences: the
+Goss/Deneubourg citation with the fitted rule (k = 20, n = 2); why this colony
+locks onto the first road that succeeded (a trail rewards use, not quality; no ant
+can compare routes); what Ant System and its successors add (route memory,
+quality-weighted deposit, a local rule of thumb, tuned forgetting); where ACO is
+used (vehicle routing, network routing, timetabling). Then a collapsed "Under the
+hood" (rule, deposit, forgetting, the number, the shortcut footnote) and four
+Sources with DOIs. Nav: Intro · Try it · Under the hood · Sources. The 8-sentence
+budget becomes 6 + ≤ 4; the "Google Maps" closer goes. `spec/prose.test.ts` counts
+the sentences in `dist/`, keeps the jargon out of the argument, checks the phrase,
+the nav targets, the closed details and the sources. Written, committed and pushed
+by the advisor at the director's instruction.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–30 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
+**None settled by me.** Decisions 1–31 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
 speed control, is folded into `CLAUDE.md`'s cap entry and superseded by 26). Beat 4's
 fixture source is deferred to slice 8 as a condition, not an open question.
 

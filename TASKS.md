@@ -314,7 +314,8 @@ The verb becomes *block the road*, and forgetting is what heals it.
       nav, scroll-linked fade where supported and never under reduced-motion;
       `?nointro` prime for stills. Draw/Erase buttons (Decision 27); w = 3 tried
       and put back (Decision 28).
-- [ ] **The eight sentences** (slice 5), the h1 is Claim A's.
+- [x] **The body** (slice 5, Decision 31) — six argument sentences in three beats,
+      a four-sentence sources block, Under the hood, Sources, nav; `spec/prose.test.ts`.
 - [ ] **The epilogue** — free wall drawing, and the "it never takes the shortcut
       you open" footnote, if it earns its place.
 

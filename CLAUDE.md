@@ -62,11 +62,13 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
   obstacles" is in only as pre-drawn walls, never as a parameter.
   The epilogue is invariant tests only, no thresholds (the list is in `PLAN.md`), because a
   visitor's own maze has no correct answer.
-- **Prose ≤ 8 sentences:** 6 argument + 1 citation + 1 carrying all three applications (ends
-  "«— and none of it is how Google Maps routes you»"). h1, ODbL footer, control labels,
-  readouts and ≤ 4-word hints do not count; the **intro** (Decision 29 — one screen above the
-  page, ≤ 4 plain sentences saying what a colony does and what the page is, which scrolls
-  away) has its own budget and may name "ant colony optimisation" once, nothing more; *a test may count prose sentences in dist and fail
+- **Prose:** 6 argument sentences in three beats (Run · Draw a wall · Try both ends), then a
+  sources block of ≤ 4 sentences — the citation, why this original colony is not always on
+  the best road, what the algorithms used in practice add, and where they are used (Decision
+  31; the old "Google Maps" closer was dropped by the director). h1, control labels, readouts
+  and ≤ 4-word hints do not count; the **intro** (Decision 29 — one screen above the page,
+  ≤ 4 plain sentences saying what a colony does and what the page is, which scrolls away)
+  has its own budget and may name "ant colony optimisation" once, nothing more; *a test may count prose sentences in dist and fail
   above 8*. The last argument sentence keeps "«a tendency, not a guarantee»". **Jargon rule** —
   `pheromone`, `ACO`, `heuristic`, `ρ`, `stigmergy`, formulas and pseudocode appear only in
   the citation and applications sentences: my implementation of Decision 7 for a visitor with

@@ -12,7 +12,8 @@
       <nav aria-label="Primary">
         <a href="#intro">Intro</a>
         <a href="#stage">Try it</a>
-        <a href="#reading">Reading</a>
+        <a href="#hood">Under the hood</a>
+        <a href="#sources">Sources</a>
       </nav>
     </header>
 
@@ -111,8 +112,116 @@
       </section>
       </div>
 
-      <!-- Slice 5 fills this: eight sentences, ≤ 65ch (Decision 14). -->
-      <div class="prose"></div>
+      <!-- The argument (slice 5, Decision 31): six sentences in three beats, each
+           beat a thing the visitor does. Hints are ≤ 4 words and do not count.
+           Then a sources block of at most four sentences, where the jargon is
+           allowed; then Under the hood, collapsed; then Sources. -->
+      <div class="prose" id="prose">
+        <section class="beat" aria-labelledby="beat-run">
+          <p class="hint" id="beat-run">Press Run</p>
+          <p class="argument">
+            For the first few seconds they spill everywhere; then one route
+            thickens, the rest fade, and within twenty seconds there is a road.
+            Nobody chose it — the first ants to make it home reinforced their own
+            path, so it is usually short and sometimes not, and the number beside
+            the field tells you which.
+          </p>
+        </section>
+        <section class="beat" aria-labelledby="beat-wall">
+          <p class="hint" id="beat-wall">Draw a wall</p>
+          <p class="argument">
+            Draw a wall across the road: the ants pile against it, spill round the
+            ends, and within seconds a new road has formed. No ant noticed a
+            problem — the blocked road simply stopped being reinforced, and
+            wherever enough ants got through, their scent became the road.
+          </p>
+        </section>
+        <section class="beat" aria-labelledby="beat-ends">
+          <p class="hint" id="beat-ends">Try both ends</p>
+          <p class="argument">
+            Set forgetting to zero, press Reset and let a road grow before you
+            break it: scent that never fades keeps them pouring into the dead end
+            long after it is one. Push forgetting to the far right and no road
+            survives at all; between those two ends the road forms and repairs
+            itself every time — a tendency, not a guarantee, and no ant is doing
+            the planning.
+          </p>
+        </section>
+
+        <section class="from" aria-labelledby="from-title">
+          <h2 id="from-title">Where this comes from — and why it is not always the best road</h2>
+          <p class="from-text">
+            Real Argentine ants do this on a two-branch bridge (Goss, Deneubourg and
+            colleagues, 1989–90); the choice rule here is the one they fitted to
+            their ants, k = 20, n = 2 — and they too keep the road they found
+            first. You may have noticed that this original colony often does not
+            end up on the best route: it locks onto the first road that succeeded,
+            because a scent trail rewards use, not quality — no ant has a map to
+            compare routes against, so a shorter route only wins if it was
+            competing from the very start. The algorithms used in practice add
+            exactly what these ants lack: each artificial ant remembers the whole
+            route it took and lays scent in proportion to how good that route was,
+            a rule of thumb such as "prefer the nearer next step" guides each
+            choice, and forgetting is tuned so that old solutions fade before they
+            lock in — that is Ant System (Dorigo, 1991–96) and its successors.
+            Tuned that way, ant colony optimisation is used for vehicle routing,
+            network routing, timetabling and other problems with far too many
+            options to try one by one.
+          </p>
+        </section>
+
+        <details class="hood" id="hood">
+          <summary>Under the hood</summary>
+          <ul>
+            <li>
+              Choosing a step: chance ∝ (20 + scent on that edge)² over the ways
+              ahead, with a preference for going straight — Deneubourg et al.
+              (1990), fitted to real ants. No distance to the food anywhere: the
+              test suite fails if one appears.
+            </li>
+            <li>
+              Laying scent: a drop on every edge, fading with how long the ant has
+              walked since it last stood at its own source; seekers lay "home",
+              carriers lay "food".
+            </li>
+            <li>Forgetting: every step, all scent × (1 − ρ); the slider is ρ.</li>
+            <li>
+              The number: mean of the last 300 trips ÷ the shortest route through
+              the terrain as it stands, recomputed when you draw.
+            </li>
+            <li>
+              Measured and kept as a footnote: open a shortcut beside an established
+              road and this colony never takes it, at any forgetting rate — which is
+              also what the 1989 colony did.
+            </li>
+          </ul>
+        </details>
+
+        <section class="sources" id="sources" aria-labelledby="sources-title">
+          <h2 id="sources-title">Sources</h2>
+          <ol>
+            <li>
+              Goss, S., Aron, S., Deneubourg, J.-L. &amp; Pasteels, J. M. (1989).
+              Self-organized shortcuts in the Argentine ant.
+              <a href="https://doi.org/10.1007/BF00462870"><i>Naturwissenschaften</i> 76, 579–581</a>.
+            </li>
+            <li>
+              Deneubourg, J.-L., Aron, S., Goss, S. &amp; Pasteels, J. M. (1990).
+              The self-organizing exploratory pattern of the Argentine ant.
+              <a href="https://doi.org/10.1007/BF01417909"><i>Journal of Insect Behavior</i> 3, 159–168</a>.
+            </li>
+            <li>
+              Dorigo, M., Maniezzo, V. &amp; Colorni, A. (1996). Ant System:
+              optimization by a colony of cooperating agents.
+              <a href="https://doi.org/10.1109/3477.484436"><i>IEEE Transactions on Systems, Man, and Cybernetics — Part B</i> 26(1), 29–41</a>.
+            </li>
+            <li>
+              Dorigo, M. &amp; Stützle, T. (2004).
+              <a href="https://doi.org/10.7551/mitpress/1290.001.0001"><i>Ant Colony Optimization</i></a>. MIT Press.
+            </li>
+          </ol>
+        </section>
+      </div>
     </main>
 
     <script type="module" src="./main.ts"></script>
