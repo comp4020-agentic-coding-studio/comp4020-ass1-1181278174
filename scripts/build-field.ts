@@ -36,13 +36,13 @@ const PARAMS = {
 } as const;
 
 /**
- * The page's own params (v5). Decision 28: the director set the momentum weight
- * to 3 to test it in the browser — w = 4 hugs edges more (a straight-mover slides
- * along whatever wall it hits), w = 3 should hug less and explore a little more
- * slowly. Provisional until judged by eye and by numbers; v3 and v4 keep w = 4
- * because the spikes were measured on it.
+ * The page's own params (v5), so they can move without touching v3 and v4 (every
+ * spike record was measured on those). Decision 28: the director tried w = 3 in
+ * the browser — less edge-hugging was the hope — and put it back to 4: on the
+ * blank scene w = 3 read 1.86x at 20 s against 1.40x, random 1.17x against 1.09x,
+ * and only the maze gained. Same value as v4, kept as its own constant.
  */
-const V5_PARAMS = { ...PARAMS, straightBias: 3 } as const;
+const V5_PARAMS = { ...PARAMS, straightBias: 4 } as const;
 
 type Rect = readonly [number, number, number, number];
 

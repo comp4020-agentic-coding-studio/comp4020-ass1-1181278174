@@ -146,7 +146,7 @@ export const FIELD_V5_SPEC: FieldSpec = {
     floor: 0,
     gradedOver: 80,
     whisker: 3,
-    straightBias: 3,
+    straightBias: 4,
     depositPerStep: 20,
   },
 };
