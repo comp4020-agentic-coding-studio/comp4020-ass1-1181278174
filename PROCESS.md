@@ -1,85 +1,69 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+An interactive explainer of the original ant-colony mechanism: four hundred ants
+that leave scent and follow it, with no map and no distance to the food — only a
+preference for going straight. On a field the visitor can leave blank, scatter
+with obstacles, or set as a maze, a road appears from nothing; draw a wall
+across it and the road forms again. The claim is the h1: *no ant knows the map,
+the road appears anyway, and it heals when you break it.* A reading (mean trip ÷
+the shortest route over the terrain as it stands) keeps the page honest, and a
+forgetting-rate slider lets the visitor find the corners — never forgetting, or
+forgetting too fast. I directed a coding agent (Claude Code) turn by turn, with
+a second model as an advisor and reviewer; the advisor's experiments were re-run
+inside this repo before they counted
+([`e0d7cc8`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/e0d7cc8)).
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+**1. The claim was thrown away, not tuned.** The plan was built on a suggestion I
+liked: with the right forgetting rate the colony would leave a long road for a
+shorter one. It held on the twelve-node test graph and failed on the field. The
+obvious move was to keep turning parameters until it looked right. Instead each
+change became a written prediction and a spike that could say no: the deposit
+scale (predicted to open a switching band — it did not, the road and the
+exploration are governed by the same number), a wander rate (predicted to seed
+the switch — it destroyed the road first), the visitor's own order of actions
+(the road held at every rate, 0% through the shortcut). I read Goss and
+Deneubourg's paper: real colonies do not switch either. So the claim moved, twice,
+each time to what the numbers held, and `CLAUDE.md` moved with it in its own
+commits
+([`34d03e2...5a391f4`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/compare/34d03e2...5a391f4)).
+I knew it was right because three predictions written before the runs were all
+falsified, in the record, and the paper agreed with the field rather than with me.
 
-1. **what happened** --- the problem, or the thing the agent got wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+**2. The bridge frozen bit-true before the engine grew.** The field needed four
+new engine parameters. The agent proposed defaults "equal to today's behaviour";
+the obvious thing was to believe it. I asked instead for the old engine's output
+to be frozen as literals — 34 seeded digests of the double bridge — and for the
+guard to be proven red-capable: switching one knob on by three parts per million
+turns all 34 red, restored turns them green
+([`f5a8fc8`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/f5a8fc8)).
+Every threshold in `spec/oracles.md` still means what it meant.
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** rather than in another prompt --- a rule added to
-`CLAUDE.md`, a check wired up, an attempt thrown away: re-prompting until it
-passes is the routine case, and changing what the agent works against is the
-skilled one.
+**3. A ranking that flattered a variant with 47 trips.** The parameter sweep put a
+variant top on a mean over almost no data. Rather than eyeball the table and pick
+the right one, the failure went into the selector: trip count became a gate on
+candidacy, not a tie-break, with the reason written beside it. Re-running changed
+the answer, which is the only evidence a guard does anything
+([`34d03e2`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/34d03e2),
+`docs/harness-log.md`). The same turn's "ants off the road" measure was caught
+reporting 95% at every setting — true and useless — and rewritten before it was
+cited
+([`0ad47ce`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/0ad47ce)).
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
+**4. A screenshot that lied.** The 390-px screenshot showed a broken layout that
+was not broken: Windows Chrome lays out at 526 CSS px and crops. Instead of fixing
+CSS that was not wrong, `pnpm shot` moved to a Linux Chromium and now verifies
+the layout width with `--dump-dom` before it trusts any PNG; the fact went into
+`CLAUDE.md` under "Facts about this repo that bite"
+([`68d2320`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/68d2320)).
+Every screenshot since carries its verified width.
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+## What was thrown away
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
-
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that the
-current reflection entry is in `reflections/`, and that your `CLAUDE.md` is
-there --- before a marker ever opens the file. It checks that your map is
-traceable, not that it is good: the marker judges whether your small,
-deliberately chosen set of moments shows real judgement and reflection. A green
-check is not a substitute for that curation.
-
-Images are deliberately not checked, because whether one renders is visible the
-moment you look. Open this file on GitHub and look at it before you ship.
+A wander rate ε (spiked, rejected, patch reverted), the shortcut mechanic and its
+doorway, two claims, four maze layouts, and a rendering floor tried on a
+fraction of the peak and rejected on the evidence of one screenshot
+([`ff12122`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/ff12122)).
