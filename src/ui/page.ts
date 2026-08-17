@@ -22,6 +22,7 @@ import { READING_WINDOW, reading } from "../sim/reading.ts";
 import { FIELD_RHO, SAMPLE } from "../sim/rho.ts";
 import { sceneWalls } from "../fixtures/presets.ts";
 import type { SceneKind } from "../fixtures/presets.ts";
+import { cellsBetween } from "./stroke.ts";
 import { createCanvasView } from "./canvas.ts";
 import { createLoop } from "./loop.ts";
 import type { Loop } from "./loop.ts";
@@ -275,11 +276,25 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     render();
   }
 
+  /**
+   * The slider's track is a POSITION 0–1, mapped to ρ by a curve (Decision 32):
+   * ρ = max · position^curve. Linear put the whole working band — 0.002 to 0.05 —
+   * in the left sixth of the track; with the curve it fills the left half, and
+   * the far end still reaches the rate at which no road survives.
+   */
+  const positionOf = (value: number): number =>
+    Math.pow(Math.max(0, value) / FIELD_RHO.max, 1 / FIELD_RHO.curve);
+  const rhoOf = (position: number): number => {
+    const raw = FIELD_RHO.max * Math.pow(Math.max(0, position), FIELD_RHO.curve);
+    // Snap to the rate's own resolution so the label never shows a phantom digit.
+    return Math.round(raw / FIELD_RHO.step) * FIELD_RHO.step;
+  };
+
   function setRho(value: number): void {
     rho = value;
     // ρ is read from the colony every step, so it takes effect without a restart.
     (colony as { rho: number }).rho = value;
-    rhoInput.value = String(value);
+    rhoInput.value = positionOf(value).toFixed(3);
     rhoValue.textContent = value.toFixed(3);
     // Regime labels are OFF on the field until the thresholds are derived
     // (Decision 19): no label rather than a wrong one. The number is still
@@ -363,12 +378,22 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     setTool(target.id === "tool-erase" ? "erase" : "build");
   };
 
-  const applyStroke = (node: NodeId | null): void => {
-    if (!node || node === strokeLast || stroke === null) return;
-    strokeLast = node;
+  const applyOne = (node: NodeId): void => {
     const isWall = colony.drawnWalls.has(node);
     if (stroke === "build" ? isWall : !isWall) return;
     toggleCell(node);
+  };
+
+  /**
+   * Apply the stroke to `node` — and to every cell between the last cell this
+   * stroke touched and `node`, because a quick drag skips cells between two
+   * pointer samples and a wall with gaps in it is not a wall.
+   */
+  const applyStroke = (node: NodeId | null): void => {
+    if (!node || node === strokeLast || stroke === null) return;
+    const path = strokeLast === null ? [node] : cellsBetween(strokeLast, node);
+    strokeLast = node;
+    for (const cell of path) applyOne(cell);
   };
 
   const onStagePointerDown = (event: PointerEvent): void => {
@@ -447,7 +472,7 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     setScene(kind);
   };
 
-  const onRhoInput = (): void => setRho(Number(rhoInput.value));
+  const onRhoInput = (): void => setRho(rhoOf(Number(rhoInput.value)));
   const onRunClick = (): void => setRunning(!loop.running);
   const onResetClick = (): void => reset();
 
@@ -468,9 +493,10 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   runButton.addEventListener("click", onRunClick);
   resetButton.addEventListener("click", onResetClick);
 
-  rhoInput.min = String(FIELD_RHO.locked);
-  rhoInput.max = String(FIELD_RHO.max);
-  rhoInput.step = String(FIELD_RHO.step);
+  // Position, not rate: see positionOf / rhoOf above.
+  rhoInput.min = "0";
+  rhoInput.max = "1";
+  rhoInput.step = String(FIELD_RHO.track);
   setRho(rho);
   speedInput.min = String(SPEED.min);
   speedInput.max = String(SPEED.max);

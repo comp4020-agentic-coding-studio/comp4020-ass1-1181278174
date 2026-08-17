@@ -1307,9 +1307,24 @@ the sentences in `dist/`, keeps the jargon out of the argument, checks the phras
 the nav targets, the closed details and the sources. Written, committed and pushed
 by the advisor at the director's instruction.
 
+### Decision 32 — strokes fill their gaps, the slider gets a curve, the field gets its own tests
+
+Director: 「修1，3，2，5」— from the advisor's list of what was left: (1) a quick drag left
+gaps in a wall; (3) `docs/prompts.md` stopped at slice 0; (2) the core-interaction
+test still asserted the bridge and its shortcut; (5) the slider's working band sat in
+the left sixth of the track. Built: `src/ui/stroke.ts` fills the cells between two
+pointer samples (four-connected Bresenham); the slider's track is a position 0–1
+with ρ = 0.3 · position² (0.02 at 0.26, 0.05 at 0.41, 0.3 at the end); the page's
+promises are held on field v5 by `spec/core-interaction.test.ts` against
+`FIELD_PROVISIONAL` — measured numbers, provisional until a derive turn
+(`spec/oracles.md` §6) — while the bridge keeps its derived thresholds in
+`spec/bridge-interaction.test.ts`; `docs/prompts.md` gains nine entries pairing the
+director's words with commits, Decisions 16–31. Written, committed and pushed by the
+advisor at the director's instruction.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–31 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
+**None settled by me.** Decisions 1–32 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
 speed control, is folded into `CLAUDE.md`'s cap entry and superseded by 26). Beat 4's
 fixture source is deferred to slice 8 as a condition, not an open question.
 

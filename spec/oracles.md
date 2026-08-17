@@ -406,3 +406,16 @@ at the crit:
 - whether the page is one idea or two
 - whether the scope shows judgement
 - whether the process reads as directed rather than retried
+
+## 6. The page's field — provisional numbers (Decision 32)
+
+Every value in §3 was derived on the double bridge, and the bridge stays the
+oracle fixture: `spec/bridge-interaction.test.ts` and `spec/engine-behaviours.test.ts`
+hold it. The page runs field v5, and `spec/core-interaction.test.ts` holds what the
+page promises there — a road forms on every scene, a wall across it is routed
+round, the far end of the slider loses the road — against `FIELD_PROVISIONAL` in
+`spec/thresholds.ts`. Those are **measured, not derived**: seed 1, the page's
+default rate, the measurement written beside each constant. They are provisional
+until a derive turn separates them two-sided against the negative controls on this
+field; until then a test that asserts a measured number about the page beats one
+that asserts a derived number about a fixture the page no longer shows.

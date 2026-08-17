@@ -1,108 +1,136 @@
-// The core-interaction contract — the last item in spec/oracles.md §4's test order.
+// The core interaction on the page's own field (Decision 32).
 //
-// The behaviour tests each hold one claim in isolation. This file holds the claim
-// the PAGE makes, in the order a visitor meets it: a trail forms, the shortcut
-// opens, and what happens next depends on one control and nothing else. Same
-// engine, same fixture, same seed for all three rates — so the only thing that
-// differs between these three outcomes is ρ. That is the argument. If the three
-// runs differed in anything else, the page would be showing an effect and
-// crediting it to forgetting.
-//
-// This is spec/oracles.md §1's reading 2 held mechanically ("the core interaction
-// changes the primary content, visibly") — reading 3, that a person arrives at the
-// claim without being told, is §5's business and no test's.
-//
-// It reuses spec/flow.ts rather than restating the schedule, and every number in
-// it is a derived symbol: nothing here may be nudged to make the page's story
-// come out.
+// spec/bridge-interaction.test.ts holds the double bridge — the oracle fixture
+// every derived threshold lives on. This file holds what the PAGE promises, on the
+// field the visitor actually watches, in the order they meet it: press Run and a
+// road forms; draw a wall across it and a new road forms; push forgetting to the
+// far end and no road survives. The numbers are PROVISIONAL — measured on this
+// field, seed 1, and written into spec/thresholds.ts with the measurement beside
+// each — not derived by two-sided separation. Provisional is still better than
+// a test that asserts the bridge and calls it the page.
 
 import { describe, expect, it } from "vitest";
-import { HORIZON, RHO, SAMPLE } from "../src/sim/rho.ts";
-import { firstSampleBelow, longestRunBelow } from "../src/sim/trace.ts";
-import {
-  BFS_CLOSED,
-  FIXTURE,
-  REAL,
-  SEED,
-  settled,
-  take,
-  traceAfterShortcut,
-} from "./flow.ts";
-import { derived } from "./thresholds.ts";
+import { FIELD_V5 } from "../src/fixtures/field-v5.ts";
+import { induce } from "../src/fixtures/graph.ts";
+import { sceneWalls } from "../src/fixtures/presets.ts";
+import type { SceneKind } from "../src/fixtures/presets.ts";
+import { shortestPathBetween } from "../src/oracle/bfs.ts";
+import type { Colony } from "../src/sim/engine.ts";
+import * as engine from "../src/sim/engine.ts";
+import { READING_WINDOW, reading } from "../src/sim/reading.ts";
+import { FIELD_RHO } from "../src/sim/rho.ts";
+import { FIELD_PROVISIONAL as F } from "./thresholds.ts";
 
-const ratios = (series: readonly { ratio: number | null }[]) =>
-  series.map((sample) => sample.ratio);
+const ANTS = 400;
+const SEED = 1;
 
-describe("the core interaction — one control, three outcomes, one engine", () => {
-  it("before the visitor touches anything, a road exists that nobody planned", () => {
-    // Beat 1. Zero pheromone at load, nothing pre-baked: the colony is on a
-    // near-shortest route through the only terrain there is, and no ant has seen
-    // the map. Measured against the 8 moves actually available, not the 4 that
-    // are still walled off.
-    const result = take(REAL, settled(REAL, RHO.default), BFS_CLOSED);
-    expect(result.status).toBe("ok");
-    expect(result.ratio).toBeLessThanOrEqual(derived("EMERGED"));
+function colonyOn(kind: SceneKind, rho = FIELD_RHO.default, seed = SEED): Colony {
+  const colony = engine.createColony(FIELD_V5, {
+    rho,
+    seed,
+    ants: ANTS,
+    tripHistory: Infinity,
+  });
+  for (const cell of sceneWalls(FIELD_V5, kind, 1)) engine.toggleCell(colony, cell);
+  return colony;
+}
+
+const bfsNow = (colony: Colony): number =>
+  shortestPathBetween(
+    induce(FIELD_V5, { openShortcut: false, blocked: colony.drawnWalls }),
+    FIELD_V5.nestZone!,
+    FIELD_V5.foodZone!,
+  ) as number;
+
+/** The page's own reading, over the trips completed since `from`. */
+const readFrom = (colony: Colony, from: number) =>
+  reading(colony.trips.slice(from), bfsNow(colony), READING_WINDOW);
+
+const run = (colony: Colony, steps: number): void => {
+  for (let i = 0; i < steps; i += 1) engine.step(colony);
+};
+
+describe("press Run — a road forms on every scene", () => {
+  it("on the blank field, within SETTLE steps, the reading is under EMERGED", () => {
+    const colony = colonyOn("blank");
+    run(colony, F.SETTLE);
+    const value = readFrom(colony, 0);
+    expect(value.status).toBe("ok");
+    expect(value.ratio as number).toBeLessThanOrEqual(F.EMERGED);
   });
 
-  it("with forgetting off, the shortcut opens and the colony does not care", () => {
-    // Beat 3, and the discriminating one. The short branch is now there, in
-    // plain sight, half the length — and the reading stays pinned at the long
-    // way for the whole horizon. Nothing is wrong with the ants; nothing
-    // evaporates, so nothing they learned can be unlearned.
-    const series = traceAfterShortcut(REAL, RHO.locked, derived("N"));
-    const stuck = derived("LOCKED");
-    expect(series).toHaveLength(derived("N") / SAMPLE);
-    for (const sample of series) expect(sample.status).toBe("ok");
-    expect(Math.min(...(ratios(series) as number[]))).toBeGreaterThanOrEqual(
-      stuck,
-    );
+  it("through the random obstacles too", () => {
+    const colony = colonyOn("random");
+    run(colony, F.SETTLE);
+    const value = readFrom(colony, 0);
+    expect(value.status).toBe("ok");
+    expect(value.ratio as number).toBeLessThanOrEqual(F.EMERGED);
   });
 
-  it("at the slider's default, the same colony breaks out within M steps", () => {
-    // Beat 4. Same seed, same fixture, same opening move — only ρ differs. The
-    // reading has to actually cross, not merely trend: `firstSampleBelow` is the
-    // step the visitor would see the line come down.
-    const series = traceAfterShortcut(REAL, RHO.default, derived("M"));
-    const crossed = firstSampleBelow(series, derived("SWITCHED"));
-    expect(crossed).toBeGreaterThanOrEqual(0);
-    expect((crossed + 1) * SAMPLE).toBeLessThanOrEqual(derived("M"));
+  it("and through the maze, given twice as long", () => {
+    const colony = colonyOn("maze");
+    run(colony, 2 * F.SETTLE);
+    const value = readFrom(colony, 0);
+    expect(value.status).toBe("ok");
+    expect(value.ratio as number).toBeLessThanOrEqual(F.EMERGED);
+  });
+});
+
+describe("draw a wall — the road heals", () => {
+  it("a bar across the settled road is routed round within HEAL_WITHIN steps", () => {
+    const colony = colonyOn("blank");
+    run(colony, F.SETTLE);
+    const before = bfsNow(colony);
+    for (let y = 15; y <= 25; y += 1) expect(engine.toggleCell(colony, `30,${y}`)).toBe(true);
+    expect(bfsNow(colony)).toBeGreaterThan(before); // the wall really is across the road
+    const cut = colony.trips.length;
+    let healedAt: number | null = null;
+    for (let step = 50; step <= F.HEAL_WITHIN; step += 50) {
+      run(colony, 50);
+      const value = readFrom(colony, cut);
+      if (value.status === "ok" && (value.ratio as number) <= F.HEALED) {
+        healedAt = step;
+        break;
+      }
+    }
+    expect(healedAt).not.toBeNull();
+  });
+});
+
+describe("try the far end — no road survives", () => {
+  it("at the slider's maximum a settled road is lost", () => {
+    const colony = colonyOn("blank");
+    run(colony, F.SETTLE);
+    (colony as { rho: number }).rho = FIELD_RHO.max;
+    const cut = colony.trips.length;
+    run(colony, F.SETTLE);
+    const value = readFrom(colony, cut);
+    // Either the reading has blown up, or too few trips complete to read at all.
+    const lost = value.status !== "ok" || (value.ratio as number) >= F.LOST_ABOVE;
+    expect(lost).toBe(true);
+  });
+});
+
+describe("the runs are honest about themselves", () => {
+  it("the same seed gives the same colony", () => {
+    const a = colonyOn("random");
+    const b = colonyOn("random");
+    run(a, 1000);
+    run(b, 1000);
+    expect(engine.digest(a)).toBe(engine.digest(b));
   });
 
-  it("at the slider's maximum, it never settles on anything", () => {
-    // The far end of the same control, and the reason the slider stops at 0.25
-    // rather than at 1: this must be a trail that exists and will not settle, not
-    // a wiped graph. No K consecutive samples below UNSTABLE — one dip is noise,
-    // two in a row is what K exists to catch.
-    const series = traceAfterShortcut(REAL, RHO.max, HORIZON);
-    expect(longestRunBelow(series, derived("UNSTABLE"))).toBeLessThan(
-      derived("K"),
-    );
-  });
-
-  it("the same seed gives the same trace, or none of the above means anything", () => {
-    // Every claim above is a claim about one seeded run. If the run were not
-    // reproducible, each of them would be an anecdote — and the trace the visitor
-    // sees would not be the series the tests assert on.
-    const once = traceAfterShortcut(REAL, RHO.default, derived("M"), SEED);
-    const again = traceAfterShortcut(REAL, RHO.default, derived("M"), SEED);
-    expect(ratios(again)).toEqual(ratios(once));
-  });
-
-  it("a different seed gives a different trace — the runs are not frozen", () => {
-    // Without this, the determinism check above would pass on an engine that
-    // ignored its seed, and "same seed, only ρ differs" would be vacuous.
-    const one = traceAfterShortcut(REAL, RHO.default, derived("M"), SEED);
-    const other = traceAfterShortcut(REAL, RHO.default, derived("M"), SEED + 1);
-    expect(ratios(other)).not.toEqual(ratios(one));
+  it("a different seed gives a different one — nothing is frozen", () => {
+    const a = colonyOn("blank", FIELD_RHO.default, 1);
+    const b = colonyOn("blank", FIELD_RHO.default, 2);
+    run(a, 1000);
+    run(b, 1000);
+    expect(engine.digest(a)).not.toBe(engine.digest(b));
   });
 
   it("the reading refuses to be a number before it has trips to average", () => {
-    // The page must be able to say "no reading yet". A warm-up value read as data
-    // is worse than no data, so the contract includes the state, not only the
-    // ratio.
-    const atLoad = REAL.create(FIXTURE, { rho: RHO.default, seed: SEED });
-    const cold = take(REAL, atLoad, BFS_CLOSED);
-    expect(cold.status).toBe("no reading yet");
-    expect(cold.ratio).toBeNull();
+    const colony = colonyOn("blank");
+    run(colony, 100);
+    expect(readFrom(colony, 0).status).not.toBe("ok");
   });
 });

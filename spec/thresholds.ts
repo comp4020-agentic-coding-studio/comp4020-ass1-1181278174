@@ -12,6 +12,25 @@
 // undefined". That distinction is the difference between a test that reports and
 // a test that merely fails.
 
+/**
+ * The page's field, PROVISIONAL (Decision 32). Not derived by two-sided
+ * separation — measured on field v5, seed 1, at the page's default rate, and
+ * written here with the measurement beside each so spec/core-interaction.test.ts
+ * asserts a number that exists rather than the bridge's. The derive turn
+ * replaces or confirms them; nothing here was moved to make a test pass.
+ */
+export const FIELD_PROVISIONAL = {
+  /** 20 s at 150 steps/s. */
+  SETTLE: 3000,
+  /** blank 1.40x and random 1.09x at 3000 steps; maze 1.34x at 6000. */
+  EMERGED: 1.6,
+  /** A bar across the settled blank road: routed round in 50 steps. */
+  HEAL_WITHIN: 1500,
+  HEALED: 1.6,
+  /** rho raised to 0.3 on a settled road: 4.95x at +1500, 18.9x at +3000. */
+  LOST_ABOVE: 3,
+} as const;
+
 export type ThresholdName =
   /**
    * Steps the colony runs BEFORE the shortcut opens, for the long trail to

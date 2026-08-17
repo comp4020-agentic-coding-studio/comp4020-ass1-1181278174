@@ -106,6 +106,11 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
 - **Who owns which number:** `spec/oracles.md` owns fixture parameters (`α`/`h`, floor,
   `N_trips`, thresholds); `src/sim/params.ts` owns engine constants (deposit, step, ant-count).
   Neither is edited without asking.
+- **Field numbers are provisional** (Decision 32): the page runs field v5; what it promises
+  there — a road on every scene, a wall routed round, the far end losing the road — is held
+  by `spec/core-interaction.test.ts` against `FIELD_PROVISIONAL` in `spec/thresholds.ts`,
+  measured with the measurement written beside each, until a derive turn on this field. The
+  bridge keeps its derived thresholds and its own tests.
 - **Two load-bearing rules, verbatim:**
   - *«a threshold that has never been red is not a test».*
   - *«the heuristic term η is a constant or purely local (momentum only) — it must never encode distance to food, or beat 1's sentence ("no ant knows the map") is false»*

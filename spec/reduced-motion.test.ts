@@ -227,16 +227,23 @@ describe("the five controls, and no more", () => {
     // silent, because aria-valuetext says the number.
     const page = mount(false);
     const rho = page.doc.getElementById("rho") as HTMLInputElement;
+    // The track is a position 0–1 (Decision 32); the rate is spoken, not the position.
     expect(rho.min).toBe("0");
-    expect(rho.max).toBe("0.3");
-    expect(rho.step).toBe("0.001");
-    expect(rho.value).toBe("0.02");
+    expect(rho.max).toBe("1");
+    expect(rho.step).toBe("0.002");
+    expect(Number(rho.value)).toBeCloseTo(Math.sqrt(0.02 / 0.3), 2);
     expect(rho.getAttribute("aria-valuetext")).toBe("0.020");
 
     page.page.setRho(0);
+    expect(rho.value).toBe("0.000");
     expect(rho.getAttribute("aria-valuetext")).toBe("0.000");
     page.page.setRho(0.05);
+    expect(Number(rho.value)).toBeCloseTo(Math.sqrt(0.05 / 0.3), 2);
     expect(rho.getAttribute("aria-valuetext")).toBe("0.050");
+    // The far end of the track is the rate at which no road survives.
+    rho.value = "1";
+    rho.dispatchEvent(new page.doc.defaultView!.Event("input"));
+    expect(rho.getAttribute("aria-valuetext")).toBe("0.300");
     page.page.destroy();
   });
 

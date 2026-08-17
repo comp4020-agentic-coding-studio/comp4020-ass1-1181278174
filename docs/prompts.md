@@ -275,3 +275,140 @@ that says why it didn't.
 >    parameters and report them with the distributions — do not conclude "1b cannot lock in" from
 >    α = 1 alone.
 > Stage the changes and propose the commit message; I will commit. Then slice 0 (CLAUDE.md).
+
+### 2026-08-17 — the field: change of fixture, not of mechanic (Decision 16)
+
+> Change of fixture, not of mechanic — Decision 16. Beat 1 as built (12 nodes, two arcs) does not
+> land: "a trail forms from nothing" is eight edges lighting up. What I want the visitor to SEE in
+> the first ten seconds is a field: hundreds of ants pouring out of the nest, threading between a few
+> obstacles, a bright road growing on its own. […] Same engine (Model 1 / 1b), same two maps, same ρ
+> slider, same one verb […] No distance heuristic, ever — if the first food discovery is too slow,
+> the fix is nearer food / more ants / a smaller field. […] Stop after turn 1 with the spike numbers;
+> nothing else changes until they say the field works.
+
+**Produced.**
+[`34d03e2`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/34d03e2)
+— the field fixture, and the spike that found the engine could not form a road on it.
+
+**Why it is here.** It moved the visitor's world from a diagram to a field while
+forbidding the one change that would have made it easy (a distance heuristic), and
+it ordered a spike before any adoption — which is what turned "the road does not
+form" into a finding rather than a fix.
+
+### 2026-08-17 — the graded deposit, spiked as variants (Decision 17)
+
+> Ruling on the field finding — Decision 17. Thank you for stopping there; the diagnosis stands and
+> I accept it: fixed deposit gives no direction in 2-D […] I am not taking (a) and not taking (b).
+> I take (c), widened, and I want it spiked as variants — nothing adopted until I have seen the
+> numbers. […] The generalisation — four fixture params, every default = today's behaviour, so the
+> bridge is bit-identical […] after it lands, the bridge digest for every seed the tests use must
+> be identical to today's. Assert that in a test for this commit; if it is not bit-identical, stop
+> and show me why.
+
+**Produced.**
+[`f5a8fc8`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/f5a8fc8)
+— four parameters, and 34 frozen bridge digests proven red-capable.
+
+**Why it is here.** It refused the agent's recommended fix (retrace) with a reason,
+chose the alternative as a hypothesis to sweep rather than a change to make, and
+required the old behaviour to be frozen and the guard to fail before it passed.
+
+### 2026-08-17 — geometry fixed, scale hypothesised (Decision 18)
+
+> Cause 1 — geometry. The gap is 19 cells from the road, so discovering it needs a 19-cell
+> excursion; on the bridge the shortcut is a fork ON the road that every ant passes. Fix the
+> disguise: the fork must be at the ants' feet. […] Cause 2 — scale, stated as a hypothesis before
+> the run so the record can show whether it survives: fork exploration in P ∝ (k+τ)^2 needs τ_road
+> = O(k). […] Prediction: bringing D back toward k's scale (D = 1–5; equivalent to raising k, which
+> stays 20) opens a band […] If no D gives that band: stop and report; do not add a knob.
+
+**Produced.**
+[`34d03e2`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/34d03e2)
+— field v2 and Stage C: mechanism confirmed, prediction falsified.
+
+**Why it is here.** The prediction was written before the run and it was wrong; the
+record shows both, and the wrongness is what pointed at the next hypothesis.
+
+### 2026-08-17 — the claim changes: B → B′ (Decision 22)
+
+> 换主张 —— 从 B 改成 B′。这一轮只做记录和重跑，不动页面。[…] 所以在这块场地、这套引擎上：锁死是绝对的，
+> 靠遗忘换路做不到，堵路愈合稳定且 ρ=0 与 ρ>0 泾渭分明。"中间区间会换路"这句是假的，主张必须改。[…]
+> 把 13-field-spikes 里的四个脚本放进 scripts/，在仓库里原样重跑一遍 […] 写明 Stage D 与两个补充
+> spike 是导演在仓库外先跑、再在仓库里复现的，不要说成是你跑出来的。
+
+**Produced.**
+[`e0d7cc8`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/e0d7cc8),
+[`ac25d55`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/ac25d55)
+— the four spikes reproduced in-repo, and CLAUDE.md's claim rewritten in its own commit.
+
+**Why it is here.** It changed the argument on evidence and insisted the evidence be
+re-run inside the repo — and attributed correctly — before it counted.
+
+### 2026-08-17 — the claim simplifies to A; the field opens up (Decision 23)
+
+> Decision 22 —— 简化：主张回到 A，遗忘率和速度是给访客玩的旋钮。[…] h1: No ant knows the map. The
+> road appears anyway — and heals itself when you break it. […] B′ 的三段式不再是正拍：上一轮两个补充
+> spike 说明第二拍依赖路在 ρ=0 下长出来、第四拍依赖滑杆够到 0.2 以上——太依赖操作顺序，不适合当担保
+> 的论点。[…] 场地 v4：开阔场，拿掉墙和门。
+
+**Produced.**
+[`5a391f4`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/5a391f4),
+[`0ad47ce`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/0ad47ce)
+— the claim, and field v4.
+
+**Why it is here.** The second change of claim in two turns, again on the numbers:
+a claim whose beats depend on the visitor's order of actions is not a claim you can
+guarantee, so it moved to what the colony does whatever you do.
+
+### 2026-08-17 — the look, decided by looking (Decisions 21 and 24)
+
+> Ruling on the page as shown — the look, one turn. […] The field renders and reads; what is wrong is
+> what the visitor SEES: 400 ants look like forty beads on a wire, the scent is a fog, the field is
+> empty. Fix the picture, not the engine — nothing below touches src/sim, params or the fixture's
+> wall/doorway/zones. […] Do not add ε or any exploration for the look — the reading pays for it.
+
+**Produced.**
+[`ff12122`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/ff12122)
+— per-cell scent, per-ant offsets, red carriers, 150 steps/s, the drawing verb.
+
+**Why it is here.** A reference picture, a list of differences, and one explicit
+refusal — the cheap route to the look was closed because it would blur the number
+the page rests on.
+
+### 2026-08-17 — paused start, three scenes, speed on a slider (Decision 26)
+
+> 我现在那边apikey到上限了，我现在允许你来写代码，并且git commit和push 几个修改要求：默认点进去显示暂停，
+> 然后一个空白的没有障碍的，有几个按钮可以切换选项：空白（即自己画障碍），随机生成障碍（可以稍微多一点），
+> 迷宫（固定格式，并且最好要有几条可达的路，不能只有一条路） 然后蚂蚁速度也变成一个滑动的，不是选择固定的速度
+
+**Produced.**
+[`5a774c7...5d2b42b`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/compare/e2477fd...5d2b42b)
+— field v5, the scenes as walls, the paused start, the speed slider, the cap at five.
+
+**Why it is here.** It handed the keyboard to the advisor when the course key ran
+out, with the change spelled out; the maze it asked for went through five layouts
+because the first four could not be solved by an engine with no map.
+
+### 2026-08-17 — an intro that scrolls away (Decision 29)
+
+> 进入网站后先展示一个全屏介绍页，用户向下滚动后，介绍页过渡/收起，进入网站主页面 […] 我希望开头加一个这个，
+> 然后在介绍页简单介绍一下蚁群算法
+
+**Produced.**
+[`e576743`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/e576743)
+
+**Why it is here.** Advised against, reaffirmed, built with the risks contained —
+one screen, sticky nav, no autoplay, a fade only where the browser can and the
+visitor allows — and the reason both ways is in PLAN.md.
+
+### 2026-08-17 — the body: not always the best road, and why (Decision 31)
+
+> 这个我感觉不好，我希望这样写，你注意到了吗，这个原始的蚁群算法往往难以形成最优路径，然后讲解一下原因，
+> 然后说一下现实中常用的蚁群算法和我们的区别，以及蚁群算法在现实中的运用 […] 删掉这个
+
+**Produced.**
+[`3ba2979`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/3ba2979)
+
+**Why it is here.** The applications sentence became four: the colony's failure to
+optimise, its cause, what the practical algorithms add, and their uses — the page's
+own honesty about its limits, at the director's insistence.

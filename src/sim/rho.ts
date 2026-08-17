@@ -55,6 +55,14 @@ export const FIELD_RHO = {
    */
   max: 0.3,
   step: 0.001,
+  /**
+   * Decision 32: the slider's track is a position 0–1 and ρ = max · position^curve.
+   * With curve 2 the working band 0.002–0.05 fills the left ~40% of the track
+   * (0.02 sits at 0.26, 0.05 at 0.41, 0.1 at 0.58) instead of the left sixth, and
+   * the right-hand end is still 0.3. `track` is the position's step.
+   */
+  curve: 2,
+  track: 0.002,
 } as const;
 
 /**
