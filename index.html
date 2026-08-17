@@ -40,9 +40,23 @@
         </p>
       </div>
       <a class="start" href="#stage">See it run ↓</a>
+      <figure class="intro-figure">
+        <img
+          src="./preview.png"
+          width="974"
+          height="546"
+          alt="The simulation twenty seconds in: a road of amber scent marks threading between grey blocks from the nest to the food, black and red ants along it."
+        />
+        <figcaption>Twenty seconds in, with random obstacles.</figcaption>
+      </figure>
     </section>
 
     <main>
+      <!-- Two columns at desktop (Decision 33): the picture and what to do with it
+           on the left; the numbers, the controls and the background reading on the
+           right. At 390 the wrappers dissolve (display: contents) and the pieces
+           stack canvas → legend → reading/controls → beats → background. -->
+      <div class="col col-left">
       <!-- The canvas is a picture, not a control: role="img", not focusable.
            The one verb has a real button in the controls (Decision 15), and
            tapping the highlighted wall does the same thing. -->
@@ -58,59 +72,6 @@
         <li><span class="dot to-food"></span>scent to food</li>
         <li><span class="dot to-home"></span>scent home</li>
       </ul>
-
-      <!-- One column beside the canvas at desktop, the next block in the stack at
-           390 — either way, reading → strip → controls (Decision 14). -->
-      <div class="side">
-      <section id="reading" class="readout">
-        <p id="readout" class="number" aria-live="polite">no reading yet</p>
-        <p id="readout-note" class="note">warming up</p>
-        <p id="share" class="note secondary">walls: 0</p>
-        <canvas
-          id="strip"
-          class="strip"
-          role="img"
-          aria-label="How the reading has moved over time."
-        ></canvas>
-      </section>
-
-      <section class="controls" aria-label="Controls">
-        <div class="scene" role="group" aria-label="Scene">
-          <span class="scene-label">Scene</span>
-          <button id="scene-blank" type="button" aria-pressed="true">Blank — draw your own</button>
-          <button id="scene-random" type="button" aria-pressed="false">Random obstacles</button>
-          <button id="scene-maze" type="button" aria-pressed="false">Maze</button>
-        </div>
-
-        <div class="scene tool" role="group" aria-label="Wall tool">
-          <span class="scene-label">Walls</span>
-          <button id="tool-draw" type="button" aria-pressed="true">Draw</button>
-          <button id="tool-erase" type="button" aria-pressed="false">Erase</button>
-        </div>
-
-        <div class="slider">
-          <label for="rho">Forgetting rate — <b id="rho-value">0.020</b></label>
-          <input id="rho" type="range" min="0" max="1" step="0.002" value="0.258" />
-          <div class="ends" aria-hidden="true">
-            <span>never forget</span><span>forget everything</span>
-          </div>
-        </div>
-
-        <div class="slider">
-          <label for="speed">Speed — <b id="speed-value">150</b> steps per second</label>
-          <input id="speed" type="range" min="30" max="300" step="10" value="150" />
-          <div class="ends" aria-hidden="true">
-            <span>slow</span><span>fast</span>
-          </div>
-        </div>
-
-        <div class="buttons">
-          <button id="clear" type="button" hidden>Clear walls</button>
-          <button id="run" type="button" aria-pressed="true">Run</button>
-          <button id="reset" type="button">Reset</button>
-        </div>
-      </section>
-      </div>
 
       <!-- The argument (slice 5, Decision 31): six sentences in three beats, each
            beat a thing the visitor does. Hints are ≤ 4 words and do not count.
@@ -148,6 +109,67 @@
           </p>
         </section>
 
+      </div>
+      </div>
+
+      <div class="col col-right">
+      <!-- One column beside the canvas at desktop, the next block in the stack at
+           390 — either way, reading → strip → controls (Decision 14). -->
+      <div class="side">
+      <section id="reading" class="readout">
+        <p id="readout" class="number" aria-live="polite">no reading yet</p>
+        <p id="readout-note" class="note">warming up</p>
+        <p id="share" class="note secondary">walls: 0</p>
+        <canvas
+          id="strip"
+          class="strip"
+          role="img"
+          aria-label="How the reading has moved over time."
+        ></canvas>
+      </section>
+
+      <section class="controls" aria-label="Controls">
+        <div class="scene" role="group" aria-label="Scene">
+          <span class="scene-label">Scene</span>
+          <button id="scene-blank" type="button" aria-pressed="true">Blank</button>
+          <button id="scene-random" type="button" aria-pressed="false">Random obstacles</button>
+          <button id="scene-maze" type="button" aria-pressed="false">Maze</button>
+        </div>
+
+        <div class="scene tool" role="group" aria-label="Wall tool">
+          <span class="scene-label">Walls</span>
+          <button id="tool-draw" type="button" aria-pressed="true">Draw</button>
+          <button id="tool-erase" type="button" aria-pressed="false">Erase</button>
+        </div>
+
+        <div class="slider">
+          <label for="rho">Forgetting rate — <b id="rho-value">0.020</b></label>
+          <input id="rho" type="range" min="0" max="1" step="0.002" value="0.258" />
+          <div class="ends" aria-hidden="true">
+            <span>never forget</span><span>forget everything</span>
+          </div>
+        </div>
+
+        <div class="slider">
+          <label for="speed">Speed — <b id="speed-value">150</b> steps per second</label>
+          <input id="speed" type="range" min="30" max="300" step="10" value="150" />
+          <div class="ends" aria-hidden="true">
+            <span>slow</span><span>fast</span>
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button id="clear" type="button" hidden>Clear walls</button>
+          <button id="run" type="button" aria-pressed="true">Run</button>
+          <button id="reset" type="button">Reset</button>
+        </div>
+      </section>
+      </div>
+
+
+      <!-- Background reading (Decision 31): where this comes from, under the hood,
+           sources. Beside the controls at desktop; last in the stack at 390. -->
+      <aside class="background" id="background" aria-label="Background">
         <section class="from" aria-labelledby="from-title">
           <h2 id="from-title">Where this comes from — and why it is not always the best road</h2>
           <p class="from-text">
@@ -221,6 +243,7 @@
             </li>
           </ol>
         </section>
+      </aside>
       </div>
     </main>
 

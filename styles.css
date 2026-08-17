@@ -122,6 +122,25 @@ h1 {
   font-weight: 600;
 }
 
+.intro-figure {
+  display: none;
+  margin: 0;
+}
+
+.intro-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+}
+
+.intro-figure figcaption {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 .start:hover,
 .start:focus-visible {
   border-color: var(--focus);
@@ -155,10 +174,18 @@ main {
   gap: 14px;
 }
 
+/* At 390 the two column wrappers dissolve and the pieces take a fixed order:
+   canvas, legend, reading/controls, the beats, then the background reading.
+   DOM order keeps the controls right after the canvas for the keyboard. */
+.col {
+  display: contents;
+}
+
 .side {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  order: 3;
 }
 
 /* The canvas sizes itself from the box, and the view redraws — never rescales —
@@ -173,6 +200,7 @@ main {
   touch-action: none;
   cursor: pointer;
   scroll-margin-top: 56px;
+  order: 1;
 }
 
 .readout {
@@ -205,6 +233,7 @@ main {
   font-size: 0.75rem;
   color: var(--muted);
   list-style: none;
+  order: 2;
 }
 
 .legend li {
@@ -275,6 +304,20 @@ button[aria-pressed="true"] {
   box-shadow: inset 0 0 0 1px var(--ring);
 }
 
+/* The one thing to press next. Run wears it while the page is paused; once the
+   ants are moving it steps back to an ordinary Pause. */
+button.primary,
+button.primary[aria-pressed="true"] {
+  color: #fff;
+  background: var(--focus);
+  border-color: var(--focus);
+  box-shadow: none;
+}
+
+button.primary:hover {
+  filter: brightness(1.08);
+}
+
 .buttons {
   display: flex;
   flex-wrap: wrap;
@@ -335,6 +378,7 @@ button[aria-pressed="true"] {
   display: grid;
   gap: 18px;
   margin-top: 8px;
+  order: 4;
 }
 
 .beat {
@@ -363,7 +407,8 @@ button[aria-pressed="true"] {
   border-top: 1px solid var(--edge);
 }
 
-.prose h2 {
+.prose h2,
+.background h2 {
   margin: 0 0 6px;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -371,7 +416,13 @@ button[aria-pressed="true"] {
 
 .from-text {
   font-size: 0.9375rem;
-  color: var(--muted);
+  color: var(--ink);
+}
+
+.background {
+  display: grid;
+  gap: 18px;
+  order: 5;
 }
 
 .hood {
@@ -391,7 +442,8 @@ button[aria-pressed="true"] {
   margin: 8px 0 0;
   padding-left: 18px;
   display: grid;
-  gap: 6px;
+  gap: 8px;
+  line-height: 1.5;
 }
 
 .sources ol {
@@ -417,12 +469,6 @@ button[aria-pressed="true"] {
     padding: 28px 32px 56px;
   }
 
-  .intro {
-    max-width: 68ch;
-    margin: 0 auto;
-    padding: 40px 0 72px;
-  }
-
   h1 {
     font-size: 2.25rem;
   }
@@ -433,25 +479,42 @@ button[aria-pressed="true"] {
 
   main {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
     gap: 20px 32px;
     align-items: start;
     max-width: 1500px;
     margin: 0 auto;
   }
 
+  /* Two independent columns (Decision 33): left = the picture, its legend and
+     the three beats; right = reading → strip → controls (Decision 14), then the
+     background reading. Each column stacks on its own, so the legend sits under
+     the canvas and the sources sit under the controls, whatever the other's
+     height. */
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+  }
+
   #stage {
-    grid-column: 1;
-    grid-row: 1;
     aspect-ratio: 16 / 9;
   }
 
-  /* Right column, top-down: reading → strip → controls (Decision 14). One
-     column, not two grid rows aligned to the canvas — that left the controls
-     stranded 200px below the strip. */
-  .side {
-    grid-column: 2;
-    grid-row: 1;
+  .prose {
+    margin-top: 6px;
+  }
+
+  .background {
+    padding-top: 6px;
+    border-top: 1px solid var(--edge);
+  }
+
+  .from {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
   }
 
   .readout {
@@ -466,15 +529,30 @@ button[aria-pressed="true"] {
     height: 110px;
   }
 
-  /* Under the canvas, not beside it — the legend labels the picture. */
-  .legend {
-    grid-column: 1;
-    grid-row: 2;
+  /* The intro: text left, a still of the simulation right (Decision 33). */
+  .intro {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 40px 0 72px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "kicker figure"
+      "title figure"
+      "text figure"
+      "start figure";
+    column-gap: 48px;
+    align-items: center;
   }
 
-  .prose {
-    grid-column: 1;
-    grid-row: 3;
+  .intro .kicker { grid-area: kicker; }
+  .intro h1 { grid-area: title; }
+  .intro .intro-text { grid-area: text; }
+  .intro .start { grid-area: start; }
+
+  .intro-figure {
+    display: block;
+    grid-area: figure;
+    align-self: center;
   }
 }
 
@@ -491,11 +569,22 @@ button[aria-pressed="true"] {
 /* Scene: three buttons, one pressed. The pressed one is drawn as the pressed
    run/pause button is, so "on" means the same thing everywhere on the page. */
 .scene {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: stretch;
   gap: 6px;
   margin-bottom: 14px;
+}
+
+.scene button {
+  padding-left: 8px;
+  padding-right: 8px;
+  line-height: 1.25;
+}
+
+.tool {
+  grid-template-columns: auto 1fr 1fr;
+  max-width: 260px;
 }
 
 .scene-label {

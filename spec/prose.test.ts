@@ -52,7 +52,7 @@ describe("the body — six argument sentences in three beats", () => {
 
 describe("the body — where this comes from", () => {
   it("says it in at most four sentences, and names the paper", () => {
-    const from = text(".prose .from-text");
+    const from = text(".from-text");
     expect(sentences(from).length).toBeLessThanOrEqual(4);
     expect(from).toContain("Goss");
     expect(from).toContain("Deneubourg");
@@ -60,7 +60,7 @@ describe("the body — where this comes from", () => {
   });
 
   it("no longer ends on the Google Maps line — the director dropped it", () => {
-    expect(text(".prose")).not.toContain("Google Maps");
+    expect(text("main")).not.toContain("Google Maps");
   });
 });
 

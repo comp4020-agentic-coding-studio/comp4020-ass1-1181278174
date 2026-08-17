@@ -1322,9 +1322,24 @@ promises are held on field v5 by `spec/core-interaction.test.ts` against
 director's words with commits, Decisions 16–31. Written, committed and pushed by the
 advisor at the director's instruction.
 
+### Decision 33 — the visual pass: two columns, a primary Run, a preview in the intro
+
+Director: 「A + B + C① + E」from the advisor's visual review. (A) At desktop the page is
+two independent columns — the canvas, its legend and the three beats on the left;
+the reading, the controls and the background reading (where this comes from, under
+the hood, sources) on the right — so nothing hangs in empty space whatever the other
+column's height; at 390 the wrappers dissolve and the order is canvas → legend →
+reading/controls → beats → background. (B) While paused, Run is the primary button
+(filled), and steps back to an ordinary Pause once running. (C①) The intro shows a
+still of the simulation beside its text at desktop — `public/preview.png`, a crop of
+the random-obstacles 20-second screenshot, hidden at 390. (E) The scene buttons are
+three equal columns ("Blank" / "Random obstacles" / "Maze"), the sources block is
+body-coloured, and the hood's list has room. Written, committed and pushed by the
+advisor at the director's instruction.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–32 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
+**None settled by me.** Decisions 1–33 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
 speed control, is folded into `CLAUDE.md`'s cap entry and superseded by 26). Beat 4's
 fixture source is deferred to slice 8 as a condition, not an open question.
 

@@ -263,6 +263,8 @@ export function createPage(doc: Document, deps: PageDeps): Page {
     // so this is not behind the motion preference.
     runButton.textContent = running ? "Pause" : "Run";
     runButton.setAttribute("aria-pressed", String(!running));
+    // While paused, Run is the one thing to press next, and it looks it.
+    runButton.classList.toggle("primary", !running);
   }
 
   /**

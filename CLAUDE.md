@@ -38,7 +38,7 @@ governs every other section.** Clauses wrapped in guillemet marks below are verb
   ant only leaves a little scent and follows scent" and "nobody planned that road". Verified
   by a cold read (two people with no background) — no test can hold it.
 - **Five controls, hard cap** (three → four with speed, Decision 25; four → five with the
-  scene, Decision 26): **scene** — three buttons, `Blank — draw your own` / `Random obstacles`
+  scene, Decision 26): **scene** — three buttons, `Blank` / `Random obstacles`
   / `Maze`; a scene is nothing but a set of wall cells laid out on the blank field with the one
   verb before the ants set out, so it is terrain, not a mechanic. Choosing one restarts the
   ants; `Random obstacles` pressed again is another scatter (seeded, so the same press count is
