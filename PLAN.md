@@ -1255,9 +1255,26 @@ counted as a sixth control. From the keyboard, Enter still toggles the cell unde
 the cursor either way, so the keyboard path did not change. Written, committed and
 pushed by the advisor at the director's instruction, as for Decision 26.
 
+### Decision 29 — an intro screen that scrolls away
+
+Director, verbatim: 「进入网站后先展示一个全屏介绍页，用户向下滚动后，介绍页过渡/收起，进入
+网站主页面 … 我希望开头加一个这个，然后在介绍页简单介绍一下蚁群算法」— on entry, one
+full-screen introduction; scrolling collapses it into the main page; it should briefly
+introduce the ant-colony algorithm. The advisor advised against a full-screen intro
+(it pushes the simulation below the first screen; the automated sweep's load
+screenshot will show text, not ants) and the director reaffirmed, so it is built as
+asked, with the risks contained: the intro is one screen of at most four plain
+sentences and holds the h1; the header with the nav is sticky, so "Try it" is
+always one click away; a "See it run" link and the skip link both go to `#stage`;
+the hand-over is a scroll-driven fade that only runs where the browser supports it
+and never under `prefers-reduced-motion` — otherwise the intro is ordinary text
+that scrolls off. Every screenshot in `pnpm shot` is now taken scrolled to the
+simulation, and one is taken of the intro. Written, committed and pushed by the
+advisor at the director's instruction.
+
 ## Open decisions
 
-**None settled by me.** Decisions 1–27 are recorded, 9 and 10 dissolved (25, the
+**None settled by me.** Decisions 1–29 are recorded (28: the momentum weight tried at 3 and put back), 9 and 10 dissolved (25, the
 speed control, is folded into `CLAUDE.md`'s cap entry and superseded by 26). Beat 4's
 fixture source is deferred to slice 8 as a condition, not an open question.
 

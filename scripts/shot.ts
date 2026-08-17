@@ -34,6 +34,14 @@ const VIEWPORTS = [
 // A still cannot tap, so the page's `?steps=&open&rho=` prime is how a screenshot
 // reaches a state the visitor reaches by hand. Every one of these is a state the
 // controls produce; nothing here is reachable only from a URL.
+/**
+ * The intro (Decision 29) is the first screen, and a headless screenshot cannot
+ * scroll past it (Chrome captures the document's top even after a fragment
+ * jump — the sticky header showed up mid-frame to prove it). So every state but
+ * `-intro` is shot with `?nointro`, the page's own prime for "the intro has
+ * scrolled away" — the view a visitor reaches with the wheel. `-intro` is shot
+ * plain, so the intro itself is evidenced too.
+ */
 const STATES = [
   // Three moments at 150 steps/s (Decision 24). Primed to an exact step count,
   // NOT left to run:
@@ -42,6 +50,7 @@ const STATES = [
   // runs in the same wall time.
   // The blank scene (Decision 26): the page loads on it, paused, and these are
   // what the visitor sees after pressing Run.
+  { suffix: "-intro", query: "" },
   { suffix: "-4s", query: "?steps=600" },
   { suffix: "-10s", query: "?steps=1500" },
   { suffix: "-20s", query: "?steps=3000" },
@@ -55,6 +64,12 @@ const STATES = [
   // visitor would build by hand.
   { suffix: "-broken", query: "?steps=3000&wall=30:15-25&after=1500" },
 ] as const;
+
+/** Everything but the intro still is shot as the visitor sees the page after scrolling. */
+function withoutIntro(state: { readonly suffix: string; readonly query: string }): string {
+  if (state.suffix === "-intro") return state.query;
+  return state.query === "" ? "?nointro" : `${state.query}&nointro`;
+}
 
 function binary(): string {
   const found = globSync(
@@ -167,7 +182,7 @@ async function main(): Promise<void> {
           // reading needs MIN_TRIPS completed trips before it is a number at all.
           "--virtual-time-budget=30000",
           `--screenshot=${path}`,
-          `${BASE}/${state.query}`,
+          `${BASE}/${withoutIntro(state)}`,
         ]);
         console.log(
           `${path}  ${viewport.width}x${viewport.height} CSS px (verified)`,

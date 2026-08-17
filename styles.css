@@ -60,12 +60,93 @@ nav a {
   color: var(--muted);
 }
 
+header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 0;
+  background: var(--page);
+}
+
+/* The intro: one screen, centred, then it scrolls away (Decision 29). */
+.intro {
+  min-height: 100svh;
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  max-width: 62ch;
+  padding: 24px 0 48px;
+  scroll-margin-top: 48px;
+}
+
+/* `hidden` must win over the grid display above — the ?nointro prime relies on it. */
+.intro[hidden] {
+  display: none;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 h1 {
-  margin: 10px 0 14px;
-  font-size: 1.25rem;
+  margin: 0;
+  font-size: 1.5rem;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.2;
   letter-spacing: -0.01em;
+}
+
+.intro-text {
+  display: grid;
+  gap: 12px;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.intro-text p {
+  margin: 0;
+}
+
+.start {
+  justify-self: start;
+  padding: 10px 16px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--raised);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.start:hover,
+.start:focus-visible {
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Scroll-linked hand-over: as the visitor scrolls, the intro fades and lifts.
+   Only where the browser can drive an animation from scroll, and never under
+   prefers-reduced-motion — the intro then simply scrolls away like any text. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .intro > * {
+      animation: intro-out linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 60vh;
+    }
+  }
+}
+
+@keyframes intro-out {
+  to {
+    opacity: 0.12;
+    transform: translateY(-20px);
+  }
 }
 
 main {
@@ -91,6 +172,7 @@ main {
   border-radius: 6px;
   touch-action: none;
   cursor: pointer;
+  scroll-margin-top: 56px;
 }
 
 .readout {
@@ -262,10 +344,18 @@ button[aria-pressed="true"] {
     padding: 28px 32px 56px;
   }
 
+  .intro {
+    max-width: 68ch;
+    margin: 0 auto;
+    padding: 40px 0 72px;
+  }
+
   h1 {
-    max-width: 26ch;
-    margin: 14px 0 22px;
-    font-size: 1.75rem;
+    font-size: 2.25rem;
+  }
+
+  .intro-text {
+    font-size: 1.125rem;
   }
 
   main {

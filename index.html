@@ -10,11 +10,36 @@
     <a class="skip" href="#stage">Skip to the simulation</a>
     <header>
       <nav aria-label="Primary">
+        <a href="#intro">Intro</a>
         <a href="#stage">Try it</a>
         <a href="#reading">Reading</a>
       </nav>
-      <h1>No ant knows the map. The road appears anyway — and heals itself when you break it.</h1>
     </header>
+
+    <!-- The intro (Decision 29): one screen that says what an ant colony does and
+         what the page is, then hands over. It scrolls away; the simulation is
+         the page. Under prefers-reduced-motion it simply sits there. -->
+    <section id="intro" class="intro" aria-labelledby="intro-title">
+      <p class="kicker">An interactive explainer</p>
+      <h1 id="intro-title">No ant knows the map. The road appears anyway — and heals itself when you break it.</h1>
+      <div class="intro-text">
+        <p>
+          Ant colonies find their way with no leader and no map: each ant leaves a
+          little scent where it walks, and follows the stronger scent it meets.
+        </p>
+        <p>
+          Repeated by hundreds of ants, and slowly forgotten by the ground, that one
+          rule is enough for a road to appear — and it is the idea behind a family of
+          computer algorithms called ant colony optimisation, used for routing and
+          scheduling.
+        </p>
+        <p>
+          Below is a colony of four hundred simulated ants that follow only that rule.
+          Press Run, then draw a wall across their road and watch what happens.
+        </p>
+      </div>
+      <a class="start" href="#stage">See it run ↓</a>
+    </section>
 
     <main>
       <!-- The canvas is a picture, not a control: role="img", not focusable.

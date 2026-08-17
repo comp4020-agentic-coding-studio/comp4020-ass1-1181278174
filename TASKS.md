@@ -309,6 +309,11 @@ The verb becomes *block the road*, and forgetting is what heals it.
       by measurement), the page loads paused, speed 30–300 on a range input,
       the control cap at five with the reason. Written, committed and pushed by
       the director's advisor at the director's instruction (course key exhausted).
+- [x] **Intro screen** (Decision 29) — one screen above the page, four plain
+      sentences on what a colony does and what the page is, holds the h1, sticky
+      nav, scroll-linked fade where supported and never under reduced-motion;
+      `?nointro` prime for stills. Draw/Erase buttons (Decision 27); w = 3 tried
+      and put back (Decision 28).
 - [ ] **The eight sentences** (slice 5), the h1 is Claim A's.
 - [ ] **The epilogue** — free wall drawing, and the "it never takes the shortcut
       you open" footnote, if it earns its place.

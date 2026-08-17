@@ -11,7 +11,13 @@ prime. Every one is a state the controls produce by hand; a still cannot press R
 or drag, and without the prime no screenshot could evidence anything but a paused
 blank field.
 
-## Current — Decision 26: paused start, three scenes, speed slider
+## Current — Decisions 26 and 29: intro screen, paused start, three scenes, speed slider
+
+The page opens on a one-screen intro (Decision 29) that scrolls away. A headless
+screenshot cannot scroll, so every still below except `-intro` is taken with the
+page's `?nointro` prime — the view a visitor has after the intro has gone.
+
+- **intro** — the first screen: [1920](./2026-08-17-page-1920-intro.png) · [390](./2026-08-17-page-390-intro.png)
 
 The page loads paused on the blank scene. Each state below is what the visitor
 sees after pressing Run (150 steps/s):

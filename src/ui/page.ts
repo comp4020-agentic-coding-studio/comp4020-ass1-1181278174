@@ -81,6 +81,12 @@ export interface Prime {
   readonly rho?: number;
   /** A scene to lay out before anything runs — the same walls the buttons draw. */
   readonly scene?: SceneKind;
+  /**
+   * Hide the intro screen (Decision 29). A headless screenshot cannot scroll, so
+   * this is how a still shows the page as a visitor sees it after the intro has
+   * scrolled away — the same view, reached by hand with the wheel.
+   */
+  readonly nointro?: boolean;
 }
 
 export interface Page {
@@ -120,6 +126,7 @@ export function readPrime(search: string): Prime | undefined {
     sceneRaw === "maze" || sceneRaw === "random" || sceneRaw === "blank"
       ? sceneRaw
       : undefined;
+  const nointro = params.has("nointro");
   const prime: Prime = {
     steps: num("steps"),
     open: params.has("open"),
@@ -127,13 +134,15 @@ export function readPrime(search: string): Prime | undefined {
     wall,
     rho: num("rho"),
     scene,
+    nointro,
   };
   return prime.steps === undefined &&
     !prime.open &&
     prime.after === undefined &&
     prime.rho === undefined &&
     wall === undefined &&
-    scene === undefined
+    scene === undefined &&
+    !nointro
     ? undefined
     : prime;
 }
@@ -471,6 +480,10 @@ export function createPage(doc: Document, deps: PageDeps): Page {
   setTool("build");
 
   if (deps.prime) {
+    if (deps.prime.nointro) {
+      const intro = doc.getElementById("intro");
+      if (intro) intro.hidden = true;
+    }
     if (deps.prime.scene) setScene(deps.prime.scene);
     for (let i = 0; i < (deps.prime.steps ?? 0); i += 1) step();
     if (deps.prime.open) toggleShortcut();
