@@ -10,10 +10,7 @@ across it and the road forms again. The claim is the h1: *no ant knows the map,
 the road appears anyway, and it heals when you break it.* A reading (mean trip ÷
 the shortest route over the terrain as it stands) keeps the page honest, and a
 forgetting-rate slider lets the visitor find the corners — never forgetting, or
-forgetting too fast. I directed a coding agent (Claude Code) turn by turn, with
-a second model as an advisor and reviewer; the advisor's experiments were re-run
-inside this repo before they counted
-([`e0d7cc8`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-1181278174/commit/e0d7cc8)).
+forgetting too fast.
 
 ## The moments that mattered
 
